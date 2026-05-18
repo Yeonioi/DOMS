@@ -162,7 +162,9 @@ function renderTableRows() {
             <td class="px-6 py-4 text-sm font-medium text-gray-900 dark:text-gray-100">${caseItem.id}</td>
             <td class="px-6 py-4">
                 <div class="flex items-center gap-2">
-                    <div class="w-8 h-8 bg-gray-300 dark:bg-gray-600 rounded-full flex-shrink-0"></div>
+                    <div class="w-8 h-8 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex-shrink-0 flex items-center justify-center">
+                        <span class="text-xs font-bold text-white">${caseItem.student.split(' ').map(n => n[0]).join('').substring(0, 2)}</span>
+                    </div>
                     <span class="text-sm font-medium text-gray-900 dark:text-gray-100">${caseItem.student}</span>
                 </div>
             </td>
@@ -362,9 +364,6 @@ function updateTableHeader() {
         checkboxTh.className = 'checkbox-header px-4 py-3 text-center text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider w-20';
         checkboxTh.innerHTML = `
             <div class="flex items-center justify-center gap-2">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                </svg>
                 Select
             </div>
         `;

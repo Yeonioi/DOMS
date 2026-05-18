@@ -27,7 +27,9 @@ async function viewCase(caseId) {
                 <div>
                     <p class="text-xs text-gray-500 dark:text-gray-400 mb-1.5">Student</p>
                     <div class="flex items-center gap-2.5">
-                        <div class="w-9 h-9 bg-gray-300 dark:bg-gray-600 rounded-full"></div>
+                        <div class="w-9 h-9 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center">
+                            <span class="text-xs font-bold text-white">${caseData.student.split(' ').map(n => n[0]).join('').substring(0, 2)}</span>
+                        </div>
                         <div>
                             <span class="text-sm font-medium text-gray-900 dark:text-gray-100 block">${
                               caseData.student

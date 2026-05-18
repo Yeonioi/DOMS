@@ -762,39 +762,55 @@ $adminName = getFormattedUserName();
 
                 <!-- Bulk Actions Bar -->
                 <div id="bulkActionsBar" class="hidden mb-4 bg-transparent border border-blue-400 dark:border-blue-600 rounded-lg overflow-hidden">
-                    <div class="px-6 py-4 flex items-center justify-between">
-                        <div class="flex items-center gap-6">
-                            <span id="selectedCount" class="text-blue-900 dark:text-blue-300 font-semibold text-sm">0 users selected</span>
-                            <div class="h-6 w-px bg-blue-300 dark:bg-blue-500"></div>
-                            <div class="flex gap-2">
-                                <button onclick="bulkSetActive()" class="px-3 py-1.5 border border-green-500 text-green-600 dark:text-green-400 text-xs font-medium rounded hover:bg-green-50 dark:hover:bg-green-900/10 transition-colors">
-                                    Activate
+                        <div class="px-6 py-4 flex items-center justify-between">
+                            <div class="flex items-center gap-6">
+                                <span id="selectedCount" class="text-blue-900 dark:text-blue-300 font-semibold text-sm">0 users selected</span>
+                                <div class="h-6 w-px bg-blue-300 dark:bg-blue-500"></div>
+                                <div class="flex gap-2">
+                                    <button onclick="bulkSetActive()" class="px-3 py-1.5 border border-green-500 text-green-600 dark:text-green-400 text-xs font-medium rounded hover:bg-green-50 dark:hover:bg-green-900/10 transition-colors">
+                                        Activate
+                                    </button>
+                                    <button onclick="bulkSetInactive()" class="px-3 py-1.5 border border-yellow-500 text-yellow-600 dark:text-yellow-400 text-xs font-medium rounded hover:bg-yellow-50 dark:hover:bg-yellow-900/10 transition-colors">
+                                        Deactivate
+                                    </button>
+                                    <button onclick="bulkDelete()" class="px-3 py-1.5 border border-red-500 text-red-600 dark:text-red-400 text-xs font-medium rounded hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors">
+                                        Delete
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <button onclick="selectAllPages()" class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium transition-colors">
+                                    Select All
                                 </button>
-                                <button onclick="bulkSetInactive()" class="px-3 py-1.5 border border-yellow-500 text-yellow-600 dark:text-yellow-400 text-xs font-medium rounded hover:bg-yellow-50 dark:hover:bg-yellow-900/10 transition-colors">
-                                    Deactivate
+                                <button onclick="selectThisPageOnly()" class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium transition-colors">
+                                    Select Page
                                 </button>
-                                <button onclick="bulkDelete()" class="px-3 py-1.5 border border-red-500 text-red-600 dark:text-red-400 text-xs font-medium rounded hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors">
-                                    Delete
+                                <div class="h-6 w-px bg-blue-300 dark:bg-blue-500"></div>
+                                <button onclick="clearSelection()" class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium transition-colors flex items-center gap-1">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                    Clear
                                 </button>
                             </div>
                         </div>
-                        <button onclick="clearSelection()" class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium transition-colors flex items-center gap-1">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                            Clear
-                        </button>
-                    </div>
                 </div>
 
                 <!-- Users Table -->
                 <div class="bg-white dark:bg-[#111827] rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden">
-                    <table class="w-full">
+                    <table class="w-full" style="table-layout: fixed;">
+                        <colgroup>
+                            <col style="width: 20%;">
+                            <col style="width: 20%;">
+                            <col style="width: 12%;">
+                            <col style="width: 12%;">
+                            <col style="width: 12%;">
+                            <col style="width: 12%;">
+                            <col style="width: auto;">
+                            <col style="width: 90px;">
+                        </colgroup>
                         <thead class="bg-gray-100 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700">
                             <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">
-                                    <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll()" class="rounded border-gray-300 text-blue-600 cursor-pointer">
-                                </th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">Name</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">Email</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">Role</th>
@@ -802,6 +818,7 @@ $adminName = getFormattedUserName();
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">Status</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">Last Login</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+                                <th class="px-6 py-3 text-center text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">Select</th>
                             </tr>
                         </thead>
                         <tbody id="usersTableBody" class="bg-white dark:bg-[#111827] divide-y divide-gray-200 dark:divide-slate-700">

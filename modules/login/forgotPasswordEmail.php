@@ -139,7 +139,7 @@
                             <span class="text-sm text-gray-600">Last Update: 11/15/2025</span>
                             <div class="ml-auto">
                                 <div class="w-2 h-2 bg-pink-500 rounded-full inline-block"></div>
-                                <span class="text-sm text-gray-600 ml-2">Support: help.edu</span>
+                                <span class="text-sm text-gray-600 ml-2">Support: STIhelp.edu</span>
                             </div>
                         </div>
                     </div>
@@ -155,8 +155,7 @@
                     <div>
                         <h4 class="text-sm font-semibold text-gray-800 mb-1">Need assistance?</h4>
                         <p class="text-xs text-gray-600">If you're having trouble accessing your account, please contact
-                            the IT Helpdesk at <span class="text-blue-600">support@sti.edu</span> or call <span
-                                class="text-blue-600">1-800-900-STI</span></p>
+                            the IT Helpdesk at <span class="text-blue-600">support@sti.edu</span>
                     </div>
                 </div>
             </div>

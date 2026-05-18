@@ -83,12 +83,12 @@ function renderStudents() {
     }
 
     grid.innerHTML = pageStudents.map(student => `
-        <div class="bg-white dark:bg-[#111827] border border-gray-200 dark:border-slate-700 rounded-lg p-5 hover:shadow-md transition-all duration-200">
-            <div class="flex items-center justify-between">
+        <div class="bg-white dark:bg-[#111827] border border-gray-200 dark:border-slate-700 rounded-lg p-5 hover:shadow-md transition-all duration-200 h-[100px]">
+            <div class="flex items-start justify-between h-full">
                 <!-- Student Info -->
                 <div class="flex items-center gap-4 flex-1">
-                    <div class="w-12 h-12 bg-gray-200 dark:bg-slate-700 rounded-full flex-shrink-0 flex items-center justify-center">
-                        <span class="text-lg font-semibold text-gray-600 dark:text-gray-400">
+                    <div class="w-12 h-12 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex-shrink-0 flex items-center justify-center">
+                        <span class="text-lg font-semibold text-white">
                             ${student.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
                         </span>
                     </div>
@@ -99,19 +99,19 @@ function renderStudents() {
                 </div>
 
                 <!-- Grade & Strand -->
-                <div class="flex items-center gap-8 px-4">
-                    <div>
+                <div class="flex items-start gap-8 px-4">
+                    <div class="min-w-[80px]">
                         <p class="text-xs text-gray-500 dark:text-gray-400 uppercase mb-0.5">Grade</p>
                         <p class="font-semibold text-gray-900 dark:text-gray-100">${student.grade}</p>
                     </div>
-                    <div>
+                    <div class="min-w-[120px]">
                         <p class="text-xs text-gray-500 dark:text-gray-400 uppercase mb-0.5">Strand/Course</p>
                         <p class="font-semibold text-gray-900 dark:text-gray-100">${student.strand}</p>
                     </div>
                 </div>
 
                 <!-- Incidents -->
-                <div class="px-4">
+                <div class="px-4 min-w-[90px]">
                     <p class="text-xs text-gray-500 dark:text-gray-400 uppercase mb-0.5">Incidents</p>
                     <p class="font-semibold text-gray-900 dark:text-gray-100">${student.incidents}</p>
                     ${student.archivedCases > 0 ? `<p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">${student.archivedCases} archived</p>` : ''}
@@ -222,8 +222,8 @@ async function viewHistory(studentId) {
             content.innerHTML = `
                 <div class="mb-6">
                     <div class="flex items-center gap-4 mb-4">
-                        <div class="w-16 h-16 bg-gray-200 dark:bg-slate-700 rounded-full flex items-center justify-center">
-                            <span class="text-2xl font-semibold text-gray-600 dark:text-gray-400">
+                        <div class="w-16 h-16 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center">
+                            <span class="text-2xl font-semibold text-white">
                                 ${student.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
                             </span>
                         </div>

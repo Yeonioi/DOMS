@@ -11,6 +11,9 @@ document.addEventListener('DOMContentLoaded', () => {
     ADMIN_NAME = window.ADMIN_NAME || document.querySelector('meta[data-admin-name]')?.content || 'User';
     console.log('Final ADMIN_NAME:', ADMIN_NAME);
     populateAjaxSelects();
+
+    const activeTab = document.querySelector('.tab-active')?.id?.replace('tab-', '') || 'incident';
+    updateBackButtonVisibility(activeTab);
 });
 
 // ── Tab Switching ────────────────────────────────────────
@@ -21,6 +24,15 @@ function switchTab(id) {
     });
     document.getElementById(`tab-panel-${id}`).classList.remove('hidden');
     document.getElementById(`tab-${id}`).classList.add('tab-active');
+
+    updateBackButtonVisibility(id);
+}
+
+function updateBackButtonVisibility(activeTab) {
+    const backButton = document.getElementById('back-to-statistics');
+    if (backButton) {
+        backButton.classList.remove('hidden');
+    }
 }
 
 // ── Populate AJAX dropdowns ───────────────────────────────
