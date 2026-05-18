@@ -336,16 +336,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
                 <!-- Cases Table -->
                 <div class="bg-white dark:bg-[#111827] rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden">
                     <div class="overflow-x-auto">
-                        <table class="w-full">
+                        <table class="w-full table-fixed">
                             <thead>
                                 <tr class="border-b border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/50">
-                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">Case ID</th>
-                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">Type</th>
-                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">Date Reported</th>
-                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">Severity</th>
-                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">Status</th>
-                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">Assigned To</th>
-                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">Action</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase w-28">Case ID</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase w-48">Type</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase w-36">Date Reported</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase w-28">Severity</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase w-32">Status</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase w-48">Assigned To</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase w-36">Action</th>
                                 </tr>
                             </thead>
                             <tbody id="casesTableBody" class="divide-y divide-gray-200 dark:divide-slate-700">
@@ -469,24 +469,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
             emptyState.classList.add('hidden');
             tbody.innerHTML = filteredCases.map(caseItem => `
                 <tr class="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors ${caseItem.isArchived ? 'opacity-70' : ''}">
-                    <td class="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-gray-100">
-                        ${escapeHtml(caseItem.id)}
+                    <td class="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-gray-100 w-28">
+                        <div class="truncate">${escapeHtml(caseItem.id)}</div>
                         ${caseItem.isArchived ? '<span class="ml-2 px-2 py-1 rounded-full text-xs font-semibold bg-gray-500/10 text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600">Archived</span>' : ''}
                     </td>
-                    <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">${escapeHtml(caseItem.type)}</td>
-                    <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">${escapeHtml(caseItem.date)}</td>
-                    <td class="px-6 py-4 text-sm">
-                        <span class="px-2 py-1 rounded-full text-xs font-semibold ${getSeverityClass(caseItem.severity)}">
-                            ${escapeHtml(caseItem.severity)}
-                        </span>
+                    <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400 w-48"><div class="truncate">${escapeHtml(caseItem.type)}</div></td>
+                    <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400 w-36"><div class="truncate">${escapeHtml(caseItem.date)}</div></td>
+                    <td class="px-6 py-4 text-sm w-28">
+                        <div class="truncate inline-block">
+                            <span class="px-2 py-1 rounded-full text-xs font-semibold ${getSeverityClass(caseItem.severity)}">
+                                ${escapeHtml(caseItem.severity)}
+                            </span>
+                        </div>
                     </td>
-                    <td class="px-6 py-4 text-sm">
-                        <span class="px-2 py-1 rounded-full text-xs font-semibold ${caseItem.statusColor}">
-                            ${escapeHtml(caseItem.status)}
-                        </span>
+                    <td class="px-6 py-4 text-sm w-32">
+                        <div class="truncate inline-block">
+                            <span class="px-2 py-1 rounded-full text-xs font-semibold ${caseItem.statusColor}">
+                                ${escapeHtml(caseItem.status)}
+                            </span>
+                        </div>
                     </td>
-                    <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">${escapeHtml(caseItem.assignedTo)}</td>
-                    <td class="px-6 py-4 text-sm">
+                    <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400 w-48"><div class="truncate">${escapeHtml(caseItem.assignedTo)}</div></td>
+                    <td class="px-6 py-4 text-sm w-36">
                         <button onclick="viewCaseDetails('${escapeHtml(caseItem.id)}')" class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium transition-colors">
                             View
                         </button>

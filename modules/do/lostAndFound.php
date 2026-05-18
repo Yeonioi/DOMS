@@ -23,14 +23,28 @@ $filterStatus = $_GET['status'] ?? '';
 $filterCategory = $_GET['category'] ?? '';
 $searchTerm = $_GET['search'] ?? '';
 
-// Build filters array
+// Server-side pagination setup
 $filters = [];
 if ($filterStatus) $filters['status'] = $filterStatus;
 if ($filterCategory) $filters['category'] = $filterCategory;
 if ($searchTerm) $filters['search'] = $searchTerm;
 
-// Get items
 $items = getLostFoundItems($filters);
+$totalItems = is_array($items) ? count($items) : 0;
+$perPage = 10;
+$pageParam = $_GET['page'] ?? null;
+if (is_scalar($pageParam) && is_numeric($pageParam)) {
+    $lfCurrentPage = max(1, (int)$pageParam);
+} else {
+    $lfCurrentPage = 1;
+}
+$totalPages = $totalItems > 0 ? (int) ceil($totalItems / $perPage) : 1;
+if ($lfCurrentPage > $totalPages) {
+    $lfCurrentPage = $totalPages;
+}
+$startIndex = max(0, ($lfCurrentPage - 1) * $perPage);
+$itemsToShow = $totalItems > 0 ? array_slice($items, $startIndex, $perPage) : [];
+
 ?>
 
 <!DOCTYPE html>
@@ -40,13 +54,16 @@ $items = getLostFoundItems($filters);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>STI Discipline Office - <?php echo htmlspecialchars($pageTitle); ?></title>
+
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script>
         tailwind.config = { darkMode: 'class' };
+
         if (localStorage.getItem("theme") === "dark") {
             document.documentElement.classList.add("dark");
         }
+
         function toggleDarkMode() {
             const html = document.documentElement;
             const isDark = html.classList.toggle("dark");
@@ -55,27 +72,17 @@ $items = getLostFoundItems($filters);
     </script>
 </head>
 
-<body class="bg-gray-50 dark:bg-[#1F2937] text-gray-900 dark:text-gray-100 transition-colors duration-300 antialiased">
+<body class="bg-gray-50 dark:bg-[#1F2937] text-gray-900 dark:text-gray-100 transition-colors duration-300 antialiased [scrollbar-gutter:stable]">
+
     <?php include __DIR__ . '/../../includes/sidebar.php'; ?>
 
     <div class="flex h-screen">
         <div class="flex-1 overflow-y-auto ml-64">
             <?php include __DIR__ . '/../../includes/header.php'; ?>
 
-            <main class="p-8 pt-28 min-h-screen transition-colors duration-300">
-                <!-- Stats Cards -->
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                    <div class="bg-white dark:bg-[#111827] border border-gray-200 dark:border-slate-700 rounded-lg shadow-sm p-6">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p class="text-sm text-gray-600 dark:text-gray-400">Total Items</p>
-                                <p class="text-3xl font-bold text-gray-900 dark:text-gray-100"><?php echo $stats['total']; ?></p>
-                            </div>
-                            <div class="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                                <i class="fas fa-box text-blue-600 dark:text-blue-400 text-2xl"></i>
-                            </div>
-                        </div>
-                    </div>
+            <main class="p-8 pt-28 min-h-screen">
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
                     <div class="bg-white dark:bg-[#111827] border border-gray-200 dark:border-slate-700 rounded-lg shadow-sm p-6">
                         <div class="flex items-center justify-between">
@@ -114,8 +121,10 @@ $items = getLostFoundItems($filters);
                     </div>
                 </div>
 
+                
+
                 <!-- Main Content -->
-                <div class="bg-white dark:bg-[#111827] border border-gray-200 dark:border-slate-700 rounded-lg shadow-sm">
+                <div class="bg-white dark:bg-[#111827] border border-gray-200 dark:border-slate-700 rounded-lg shadow-sm mt-6">
                     <!-- Header with Actions -->
                     <div class="p-6 border-b border-gray-200 dark:border-slate-700">
                         <div class="flex items-center justify-between mb-6">
@@ -185,7 +194,7 @@ $items = getLostFoundItems($filters);
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-200 dark:divide-slate-700">
-                                <?php if (empty($items)): ?>
+                                <?php if ($totalItems === 0): ?>
                                     <tr>
                                         <td colspan="7" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
                                             <i class="fas fa-inbox text-4xl mb-4"></i>
@@ -193,7 +202,7 @@ $items = getLostFoundItems($filters);
                                         </td>
                                     </tr>
                                 <?php else: ?>
-                                    <?php foreach ($items as $item): ?>
+                                    <?php foreach ($itemsToShow as $item): ?>
                                             <tr class="hover:bg-gray-50 dark:hover:bg-[#0F1623] transition"
                                                 data-item-name="<?php echo htmlspecialchars(strtolower($item['item_name'])); ?>"
                                                 data-category="<?php echo htmlspecialchars(strtolower($item['category'])); ?>"
@@ -273,6 +282,74 @@ $items = getLostFoundItems($filters);
                         </table>
                     </div>
                 </div>
+
+                        <!-- Pagination (moved outside the table card) -->
+                        <div class="mt-4 flex items-center justify-between px-6 py-2">
+                            <div id="paginationInfo" class="text-sm text-gray-600 dark:text-gray-400">
+                                Showing <?php echo $startIndex + 1; ?>-<?php echo min($startIndex + $perPage, $totalItems); ?> of <?php echo $totalItems; ?> items
+                            </div>
+                            <div id="paginationButtons" class="flex gap-2 text-sm">
+                                <?php
+                                $maxButtons = 7;
+                                $queryParams = $_GET;
+
+                                $buildUrl = function($p) use ($queryParams) {
+                                    $qp = $queryParams;
+                                    $qp['page'] = (int)$p;
+                                    return '?' . http_build_query($qp);
+                                };
+
+                                $btnBase = 'px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 min-w-[44px] text-center inline-flex items-center justify-center';
+                                $active = 'px-3 py-2 rounded-lg bg-blue-600 text-white font-semibold min-w-[44px] text-center inline-flex items-center justify-center';
+                                $disabledClass = 'opacity-50 cursor-not-allowed';
+
+                                // Previous (always rendered)
+                                if ($lfCurrentPage > 1) {
+                                    echo '<button onclick="window.location.href=\'' . $buildUrl($lfCurrentPage - 1) . '\'" class="' . $btnBase . '">« Prev</button>';
+                                } else {
+                                    echo '<span class="' . $btnBase . ' ' . $disabledClass . '" aria-disabled="true">« Prev</span>';
+                                }
+
+                                if ($totalPages <= $maxButtons) {
+                                    for ($i = 1; $i <= $totalPages; $i++) {
+                                        if ($i == $lfCurrentPage) echo '<span class="' . $active . '">' . $i . '</span>';
+                                        else echo '<button onclick="window.location.href=\'' . $buildUrl($i) . '\'" class="' . $btnBase . '">' . $i . '</button>';
+                                    }
+                                } else {
+                                    $innerCount = $maxButtons - 2;
+                                    $start = max(2, $lfCurrentPage - floor($innerCount / 2));
+                                    $end = min($totalPages - 1, $start + $innerCount - 1);
+                                    if ($end - $start + 1 < $innerCount) {
+                                        $start = max(2, $end - $innerCount + 1);
+                                    }
+
+                                    // First
+                                    if (1 == $lfCurrentPage) echo '<span class="' . $active . '">1</span>';
+                                    else echo '<button onclick="window.location.href=\'' . $buildUrl(1) . '\'" class="' . $btnBase . '">1</button>';
+
+                                    if ($start > 2) echo '<span class="' . $btnBase . ' ' . $disabledClass . '">&hellip;</span>';
+
+                                    for ($i = $start; $i <= $end; $i++) {
+                                        if ($i == $lfCurrentPage) echo '<span class="' . $active . '">' . $i . '</span>';
+                                        else echo '<button onclick="window.location.href=\'' . $buildUrl($i) . '\'" class="' . $btnBase . '">' . $i . '</button>';
+                                    }
+
+                                    if ($end < $totalPages - 1) echo '<span class="' . $btnBase . ' ' . $disabledClass . '">&hellip;</span>';
+
+                                    // Last
+                                    if ($totalPages == $lfCurrentPage) echo '<span class="' . $active . '">' . $totalPages . '</span>';
+                                    else echo '<button onclick="window.location.href=\'' . $buildUrl($totalPages) . '\'" class="' . $btnBase . '">' . $totalPages . '</button>';
+                                }
+
+                                // Next (always rendered)
+                                if ($lfCurrentPage < $totalPages) {
+                                    echo '<button onclick="window.location.href=\'' . $buildUrl($lfCurrentPage + 1) . '\'" class="' . $btnBase . '">Next »</button>';
+                                } else {
+                                    echo '<span class="' . $btnBase . ' ' . $disabledClass . '" aria-disabled="true">Next »</span>';
+                                }
+                                ?>
+                            </div>
+                        </div>
             </main>
         </div>
     </div>
