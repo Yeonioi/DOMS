@@ -107,6 +107,17 @@ function renderUsers() {
     console.log('Rendering users...');
     
     const tableBody = document.getElementById('usersTableBody');
+    const getStatusToggleIcon = (isActive) => isActive
+        ? `
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+        `
+        : `
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+        `;
 
     if (filteredUsers.length === 0) {
         tableBody.innerHTML = `
@@ -135,7 +146,14 @@ function renderUsers() {
     const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
 
     let tableHTML = paginatedUsers.map(user => `
-        <tr class="group h-[72px] hover:bg-gray-50 dark:hover:bg-slate-700/50 border-b border-gray-100 dark:border-slate-700 border-l-4 transition-colors ${selectedUserIds.has(parseInt(user.user_id)) ? 'bg-blue-50 dark:bg-slate-800 border-l-blue-600' : 'border-l-transparent'}">
+        ${(() => {
+            const isActive = Number(user.is_active) === 1;
+            const statusText = isActive ? 'Active' : 'Inactive';
+            return `
+        <tr class="group h-[72px] hover:bg-gray-50 dark:hover:bg-slate-700/50 border-b border-gray-100 dark:border-slate-700 border-l-4 transition-colors ${selectedUserIds.has(user.user_id) ? 'bg-blue-50 dark:bg-slate-800 border-l-blue-600' : 'border-l-transparent'}">
+            <td class="px-6 py-4">
+                <input type="checkbox" class="user-checkbox w-5 h-5 rounded border-gray-300 dark:border-slate-600 text-blue-600 dark:accent-blue-600 cursor-pointer accent-blue-600" data-user-id="${user.user_id}" ${selectedUserIds.has(user.user_id) ? 'checked' : ''} onchange="updateSelection()">
+            </td>
             <td class="px-6 py-4">
                 <div>
                     <p class="font-semibold text-gray-900 dark:text-gray-100">${escapeHtml(user.full_name)}</p>
@@ -153,8 +171,8 @@ function renderUsers() {
             </td>
             <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">${user.contact_number || 'N/A'}</td>
             <td class="px-6 py-4">
-                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${user.is_active ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'}">
-                    ${user.status}
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${isActive ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'}">
+                    ${statusText}
                 </span>
             </td>
             <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">${user.last_login || '—'}</td>
@@ -173,11 +191,9 @@ function renderUsers() {
                         </svg>
                         ${user.has_pending_reset ? '<span class="absolute top-0 right-0 inline-flex items-center justify-center h-5 w-5 rounded-full text-xs font-bold bg-red-500 text-white">!</span>' : ''}
                     </button>
-                    <button data-action="toggle" data-user-id="${user.user_id}" data-status="${user.is_active}" 
-                        class="p-2 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition-colors cursor-pointer" title="Toggle Status">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
+                    <button data-action="toggle" data-user-id="${user.user_id}" data-status="${isActive ? 1 : 0}" 
+                        class="p-2 ${isActive ? 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20' : 'text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20'} rounded-lg transition-colors cursor-pointer" title="${isActive ? 'Deactivate User' : 'Activate User'}">
+                        ${getStatusToggleIcon(isActive)}
                     </button>
                     <button data-action="delete" data-user-id="${user.user_id}" 
                         class="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors cursor-pointer" title="Delete User">
@@ -187,10 +203,8 @@ function renderUsers() {
                     </button>
                 </div>
             </td>
-            <td class="px-6 py-4 text-center">
-                <input type="checkbox" class="user-checkbox w-5 h-5 rounded border-gray-300 dark:border-slate-600 text-blue-600 dark:accent-blue-600 cursor-pointer accent-blue-600" data-user-id="${user.user_id}" ${selectedUserIds.has(user.user_id) ? 'checked' : ''} onchange="updateSelection()">
-            </td>
-        </tr>
+        </tr>`;
+        })()}
     `).join('');
 
     // Add empty rows to maintain consistent table height
