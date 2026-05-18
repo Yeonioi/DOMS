@@ -109,23 +109,35 @@ function renderPagination() {
     if (currentPage > totalPages) currentPage = totalPages || 1;
     setPageForTab(currentTab, currentPage);
 
-    // Update info text
-    infoContainer.textContent = `Showing ${Math.min(totalCases, casesPerPage)} of ${totalCases} cases`;
+    // Update info text (show start-end of current page)
+    const start = totalCases === 0 ? 0 : (currentPage - 1) * casesPerPage + 1;
+    const end = Math.min(start + casesPerPage - 1, totalCases);
+    infoContainer.textContent = `Showing ${start}-${end} of ${totalCases} cases`;
 
     // Clear old buttons
     paginationContainer.innerHTML = '';
 
-    // Create page buttons
+    const btnBase = 'px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 min-w-[44px] text-center inline-flex items-center justify-center mx-1';
+    const active = 'px-3 py-2 rounded-lg bg-blue-600 text-white font-semibold min-w-[44px] text-center inline-flex items-center justify-center mx-1';
+    const disabledClass = 'opacity-50 cursor-not-allowed';
+
+    const appendBtn = (text, enabled, page, isActive) => {
+        const tag = enabled ? 'button' : 'span';
+        const el = document.createElement(tag);
+        el.textContent = text;
+        el.className = isActive ? active : (btnBase + (enabled ? '' : ' ' + disabledClass));
+        if (!enabled) el.setAttribute('aria-disabled', 'true');
+        if (enabled) el.addEventListener('click', () => { updateActiveTabPage(page); renderCases(); });
+        paginationContainer.appendChild(el);
+    };
+
+    appendBtn('« Prev', currentPage > 1, Math.max(1, currentPage - 1), false);
+
     for (let i = 1; i <= totalPages; i++) {
-        const btn = document.createElement('button');
-        btn.textContent = i;
-        btn.className = `px-3 py-1 mx-1 rounded ${i === currentPage ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300'}`;
-        btn.addEventListener('click', () => {
-            updateActiveTabPage(i);
-            renderCases();
-        });
-        paginationContainer.appendChild(btn);
+        appendBtn(String(i), true, i, i === currentPage);
     }
+
+    appendBtn('Next »', currentPage < totalPages, Math.min(totalPages, currentPage + 1), false);
 }
 
 // Render cases in the table
@@ -159,8 +171,8 @@ function renderTableRows() {
 
     let tableHTML = casesToDisplay.map(caseItem => `
         <tr class="h-[72px] hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors">
-            <td class="px-6 py-4 text-sm font-medium text-gray-900 dark:text-gray-100">${caseItem.id}</td>
-            <td class="px-6 py-4">
+            <td class="px-6 py-4 text-sm font-medium text-gray-900 dark:text-gray-100 w-28"><div class="truncate">${caseItem.id}</div></td>
+            <td class="px-6 py-4 w-48">
                 <div class="flex items-center gap-2">
                     <div class="w-8 h-8 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex-shrink-0 flex items-center justify-center">
                         <span class="text-xs font-bold text-white">${caseItem.student.split(' ').map(n => n[0]).join('').substring(0, 2)}</span>
@@ -168,12 +180,14 @@ function renderTableRows() {
                     <span class="text-sm font-medium text-gray-900 dark:text-gray-100">${caseItem.student}</span>
                 </div>
             </td>
-            <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">${caseItem.type}</td>
-            <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">${caseItem.date}</td>
-            <td class="px-6 py-4">
-                <span class="inline-block px-2.5 py-1 text-xs font-medium rounded ${statusColors[caseItem.statusColor]}">${caseItem.status}</span>
+            <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-300 w-48"><div class="truncate">${caseItem.type}</div></td>
+            <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-300 w-36"><div class="truncate">${caseItem.date}</div></td>
+            <td class="px-6 py-4 w-32">
+                <div class="truncate inline-block">
+                    <span class="inline-block px-2.5 py-1 text-xs font-medium rounded ${statusColors[caseItem.statusColor]}">${caseItem.status}</span>
+                </div>
             </td>
-            <td class="px-2 py-2 pr-4 whitespace-nowrap" style="width:1%;">
+            <td class="px-2 py-2 pr-4 whitespace-nowrap w-56">
                 <div class="flex items-center gap-0.5">
                     ${currentTab === 'archived' ? `
                         <button onclick="unarchiveCase('${caseItem.id}')"

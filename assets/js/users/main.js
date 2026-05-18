@@ -256,38 +256,48 @@ function updatePaginationButtons() {
         return;
     }
 
-    let html = '';
-    
-    // Previous button
-    if (currentPage > 1) {
-        html += `<button onclick="goToPage(${currentPage - 1})" class="px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors font-medium" title="Previous">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-            </svg>
-        </button>`;
-    }
+    function renderCompactPaginationDOM(container, currentPage, totalPages, onPageChange) {
+        if (!container) return;
+        const btnBase = 'px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700';
+        const active = 'px-3 py-2 rounded-lg bg-blue-600 text-white font-semibold';
+        const disabledClass = 'opacity-50 cursor-not-allowed';
+        const ellipsis = 'px-2';
+        const maxButtons = 7;
 
-    // Page numbers
-    for (let i = 1; i <= totalPages; i++) {
-        if (i === currentPage) {
-            html += `<button class="px-3 py-2 rounded-lg bg-blue-600 text-white font-semibold">${i}</button>`;
-        } else if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
-            html += `<button onclick="goToPage(${i})" class="px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors font-medium">${i}</button>`;
-        } else if (i === 2 || i === totalPages - 1) {
-            html += `<span class="px-3 py-2 text-gray-500 dark:text-gray-400">…</span>`;
+        container.innerHTML = '';
+        if (totalPages <= 1) return;
+
+        const appendBtn = (text, enabled, page, isActive) => {
+            const el = document.createElement(enabled ? 'button' : 'span');
+            el.textContent = text;
+            el.className = isActive ? active : (btnBase + (enabled ? '' : ' ' + disabledClass));
+            if (enabled && typeof onPageChange === 'function') el.addEventListener('click', () => onPageChange(page));
+            container.appendChild(el);
+        };
+
+        appendBtn('« Prev', currentPage > 1, currentPage - 1, false);
+
+        if (totalPages <= maxButtons) {
+            for (let i = 1; i <= totalPages; i++) appendBtn(String(i), true, i, i === currentPage);
+        } else {
+            const innerCount = maxButtons - 2;
+            let start = Math.max(2, currentPage - Math.floor(innerCount / 2));
+            let end = Math.min(totalPages - 1, start + innerCount - 1);
+            if (end - start + 1 < innerCount) start = Math.max(2, end - innerCount + 1);
+
+            appendBtn('1', true, 1, currentPage === 1);
+            if (start > 2) { const s = document.createElement('span'); s.className = ellipsis; s.textContent = '…'; container.appendChild(s); }
+
+            for (let i = start; i <= end; i++) appendBtn(String(i), true, i, i === currentPage);
+
+            if (end < totalPages - 1) { const s = document.createElement('span'); s.className = ellipsis; s.textContent = '…'; container.appendChild(s); }
+            appendBtn(String(totalPages), true, totalPages, currentPage === totalPages);
         }
+
+        appendBtn('Next »', currentPage < totalPages, currentPage + 1, false);
     }
 
-    // Next button
-    if (currentPage < totalPages) {
-        html += `<button onclick="goToPage(${currentPage + 1})" class="px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors font-medium" title="Next">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-            </svg>
-        </button>`;
-    }
-
-    paginationButtons.innerHTML = html;
+    renderCompactPaginationDOM(paginationButtons, currentPage, totalPages, function(p) { goToPage(p); });
 }
 
 // ====== Go To Page ======

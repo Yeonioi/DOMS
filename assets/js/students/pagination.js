@@ -22,42 +22,46 @@ function updatePaginationButtons() {
     const pagination = document.getElementById('paginationButtons');
     const totalPages = Math.ceil(filteredStudents.length / studentsPerPage);
 
-    if (totalPages === 0) {
-        pagination.innerHTML = '';
-        return;
-    }
+    function renderCompactPaginationDOM(container, currentPage, totalPages, onPageChange) {
+        if (!container) return;
+        const btnBase = 'px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700';
+        const active = 'px-3 py-2 rounded-lg bg-blue-600 text-white font-semibold';
+        const disabledClass = 'opacity-50 cursor-not-allowed';
+        const ellipsis = 'px-2';
+        const maxButtons = 7;
 
-    let html = `
-        <button onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''} 
-            class="px-3 py-1.5 text-sm border border-gray-300 dark:border-slate-600 rounded hover:bg-gray-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed text-gray-700 dark:text-gray-300">
-            Previous
-        </button>
-    `;
+        container.innerHTML = '';
+        if (totalPages <= 1) return;
 
-    // Show page numbers
-    for (let i = 1; i <= totalPages; i++) {
-        if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
-            html += `
-                <button onclick="changePage(${i})" 
-                    class="px-3 py-1.5 text-sm border rounded ${
-                        i === currentPage 
-                            ? 'bg-blue-600 text-white border-blue-600' 
-                            : 'border-gray-300 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300'
-                    }">
-                    ${i}
-                </button>
-            `;
-        } else if (i === currentPage - 2 || i === currentPage + 2) {
-            html += `<span class="px-2 text-gray-500">...</span>`;
+        const appendBtn = (text, enabled, page, isActive) => {
+            const el = document.createElement(enabled ? 'button' : 'span');
+            el.textContent = text;
+            el.className = isActive ? active : (btnBase + (enabled ? '' : ' ' + disabledClass));
+            if (enabled && typeof onPageChange === 'function') el.addEventListener('click', () => onPageChange(page));
+            container.appendChild(el);
+        };
+
+        appendBtn('« Prev', currentPage > 1, currentPage - 1, false);
+
+        if (totalPages <= maxButtons) {
+            for (let i = 1; i <= totalPages; i++) appendBtn(String(i), true, i, i === currentPage);
+        } else {
+            const innerCount = maxButtons - 2;
+            let start = Math.max(2, currentPage - Math.floor(innerCount / 2));
+            let end = Math.min(totalPages - 1, start + innerCount - 1);
+            if (end - start + 1 < innerCount) start = Math.max(2, end - innerCount + 1);
+
+            appendBtn('1', true, 1, currentPage === 1);
+            if (start > 2) { const s = document.createElement('span'); s.className = ellipsis; s.textContent = '…'; container.appendChild(s); }
+
+            for (let i = start; i <= end; i++) appendBtn(String(i), true, i, i === currentPage);
+
+            if (end < totalPages - 1) { const s = document.createElement('span'); s.className = ellipsis; s.textContent = '…'; container.appendChild(s); }
+            appendBtn(String(totalPages), true, totalPages, currentPage === totalPages);
         }
+
+        appendBtn('Next »', currentPage < totalPages, currentPage + 1, false);
     }
 
-    html += `
-        <button onclick="changePage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''} 
-            class="px-3 py-1.5 text-sm border border-gray-300 dark:border-slate-600 rounded hover:bg-gray-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed text-gray-700 dark:text-gray-300">
-            Next
-        </button>
-    `;
-
-    pagination.innerHTML = html;
+    renderCompactPaginationDOM(pagination, currentPage, totalPages, changePage);
 }

@@ -82,8 +82,11 @@ function renderCalendar() {
     }
     
     // Next month days
+    // Decide whether to render 5 or 6 rows (35 or 42 cells)
+    const totalNeeded = firstDay + daysInMonth; // prev month blanks + current month days
+    const cells = totalNeeded > 35 ? 42 : 35;
     const totalCells = grid.children.length;
-    const remainingCells = 35 - totalCells;
+    const remainingCells = cells - totalCells;
     for (let day = 1; day <= remainingCells; day++) {
         const cell = createDayCell(day, true, new Date(year, month + 1, day));
         grid.appendChild(cell);

@@ -70,7 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && !empty($_GET['search'])) {
             <?php include __DIR__ . '/../../includes/header.php'; ?>
 
             <!-- Page Content -->
-            <main class="p-8 pt-28 min-h-screen transition-colors duration-300">
+            <main class="p-8 pt-20 min-h-screen transition-colors duration-300">
                 
                 <?php if ($errorMessage): ?>
                     <!-- Error Message -->
