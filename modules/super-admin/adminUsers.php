@@ -806,8 +806,8 @@ $adminName = getFormattedUserName();
                             <col style="width: 12%;">
                             <col style="width: 12%;">
                             <col style="width: 12%;">
-                            <col style="width: auto;">
-                            <col style="width: 90px;">
+                            <col style="width: 16%;">
+                            <col style="width: 72px;">
                         </colgroup>
                         <thead class="bg-gray-100 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700">
                             <tr>
@@ -817,8 +817,8 @@ $adminName = getFormattedUserName();
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">Contact</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">Status</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">Last Login</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">Actions</th>
-                                <th class="px-6 py-3 text-center text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">Select</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Actions</th>
+                                <th class="px-3 py-3 text-center text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Select</th>
                             </tr>
                         </thead>
                         <tbody id="usersTableBody" class="bg-white dark:bg-[#111827] divide-y divide-gray-200 dark:divide-slate-700">

@@ -152,9 +152,6 @@ function renderUsers() {
             return `
         <tr class="group h-[72px] hover:bg-gray-50 dark:hover:bg-slate-700/50 border-b border-gray-100 dark:border-slate-700 border-l-4 transition-colors ${selectedUserIds.has(user.user_id) ? 'bg-blue-50 dark:bg-slate-800 border-l-blue-600' : 'border-l-transparent'}">
             <td class="px-6 py-4">
-                <input type="checkbox" class="user-checkbox w-5 h-5 rounded border-gray-300 dark:border-slate-600 text-blue-600 dark:accent-blue-600 cursor-pointer accent-blue-600" data-user-id="${user.user_id}" ${selectedUserIds.has(user.user_id) ? 'checked' : ''} onchange="updateSelection()">
-            </td>
-            <td class="px-6 py-4">
                 <div>
                     <p class="font-semibold text-gray-900 dark:text-gray-100">${escapeHtml(user.full_name)}</p>
                     <p class="text-sm text-gray-500 dark:text-gray-400">
@@ -176,8 +173,8 @@ function renderUsers() {
                 </span>
             </td>
             <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">${user.last_login || '—'}</td>
-            <td class="px-6 py-4">
-                <div class="flex gap-1.5">
+            <td class="px-6 py-4 whitespace-nowrap">
+                <div class="flex flex-nowrap gap-1.5">
                     <button data-action="edit" data-user-id="${user.user_id}" 
                         class="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors cursor-pointer" title="Edit User">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -202,6 +199,9 @@ function renderUsers() {
                         </svg>
                     </button>
                 </div>
+            </td>
+            <td class="px-3 py-4 text-center whitespace-nowrap">
+                <input type="checkbox" class="user-checkbox w-5 h-5 rounded border-gray-300 dark:border-slate-600 text-blue-600 dark:accent-blue-600 cursor-pointer accent-blue-600" data-user-id="${user.user_id}" ${selectedUserIds.has(user.user_id) ? 'checked' : ''} onchange="updateSelection()">
             </td>
         </tr>`;
         })()}
