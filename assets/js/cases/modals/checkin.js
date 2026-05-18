@@ -1258,7 +1258,9 @@ function renderCheckInModal(modal, caseId, caseData, activeSanction, totalDays, 
       <!-- Student + Sanction Info Card -->
       <div class="bg-gray-50 dark:bg-slate-700/60 rounded-lg p-3 mb-4 flex-shrink-0">
         <div class="flex items-center gap-3">
-          <div class="w-9 h-9 bg-gray-300 dark:bg-gray-600 rounded-full flex-shrink-0"></div>
+          <div class="w-9 h-9 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex-shrink-0 flex items-center justify-center">
+            <span class="text-xs font-bold text-white">${caseData.student.split(' ').map(n => n[0]).join('').substring(0, 2)}</span>
+          </div>
           <div class="flex-1 min-w-0">
             <p class="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">${caseData.student}</p>
             <p class="text-xs text-gray-500 dark:text-gray-400 truncate">${sanctionName}</p>

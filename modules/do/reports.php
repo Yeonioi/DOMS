@@ -446,21 +446,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
             <main class="p-8 pt-28 min-h-screen">
 
                 <!-- Tabs -->
-                <div class="flex flex-wrap gap-2 mb-8">
-                    <?php
-                    $tabs = [
-                        ['id'=>'incident',   'label'=>'Incident Reports'],
-                        ['id'=>'statistics', 'label'=>'Case Statistics'],
-                        ['id'=>'lostfound',  'label'=>'Lost & Found'],
-                        ['id'=>'student',    'label'=>'Student Behavior'],
-                    ];
-                    foreach ($tabs as $i => $tab): ?>
-                        <button id="tab-<?= $tab['id'] ?>"
-                            onclick="switchTab('<?= $tab['id'] ?>')"
-                            class="px-6 py-2 bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-300 dark:hover:bg-slate-600 transition-colors <?= $i===0?'tab-active':'' ?>">
-                            <?= $tab['label'] ?>
-                        </button>
-                    <?php endforeach; ?>
+                <div class="flex flex-wrap items-start justify-between gap-4 mb-8">
+                    <div class="flex flex-wrap gap-2">
+                        <?php
+                        $tabs = [
+                            ['id'=>'incident',   'label'=>'Incident Reports'],
+                            ['id'=>'statistics', 'label'=>'Case Statistics'],
+                            ['id'=>'lostfound',  'label'=>'Lost & Found'],
+                            ['id'=>'student',    'label'=>'Student Behavior'],
+                        ];
+                        foreach ($tabs as $i => $tab): ?>
+                            <button id="tab-<?= $tab['id'] ?>"
+                                onclick="switchTab('<?= $tab['id'] ?>')"
+                                class="px-6 py-2 bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-300 dark:hover:bg-slate-600 transition-colors <?= $i===0?'tab-active':'' ?>">
+                                <?= $tab['label'] ?>
+                            </button>
+                        <?php endforeach; ?>
+                    </div>
+
+                    <a id="back-to-statistics" href="/PrototypeDO/modules/do/statistics.php"
+                        class="shrink-0 px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200 rounded-lg font-medium transition-colors border border-gray-300 dark:border-slate-600 flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                        </svg>
+                        Back to Statistics
+                    </a>
                 </div>
 
                 <!-- Tab panels -->

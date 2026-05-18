@@ -30,7 +30,9 @@ function renderCases() {
             <td class="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">${c.id}</td>
             <td class="px-6 py-4 text-sm">
                 <div class="flex items-center gap-2.5">
-                    <div class="w-8 h-8 bg-gray-300 dark:bg-gray-600 rounded-full flex-shrink-0"></div>
+                    <div class="w-8 h-8 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex-shrink-0 flex items-center justify-center">
+                        <span class="text-xs font-bold text-white">${c.student.split(' ').map(n => n[0]).join('').substring(0, 2)}</span>
+                    </div>
                     <span class="text-gray-900 dark:text-gray-100">${c.student}</span>
                 </div>
             </td>
