@@ -111,6 +111,31 @@ if (isset($_SESSION['user']) && isset($_SESSION['user_id'])) {
                 <h2 class="text-3xl font-bold text-gray-800 mb-2">Sign In</h2>
                 <p class="text-gray-500 mb-8">Please enter your credentials to continue</p>
 
+                <!-- Error Message Alert -->
+                <?php
+                $error = $_GET['error'] ?? null;
+                if ($error): ?>
+                    <div class="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
+                        <svg class="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <div>
+                            <h4 class="text-sm font-semibold text-red-800 mb-1">Login Failed</h4>
+                            <p class="text-sm text-red-700">
+                                <?php
+                                if ($error === 'invalid') {
+                                    echo 'Wrong username or password. Please try again.';
+                                } elseif ($error === 'empty') {
+                                    echo 'Please enter both username and password.';
+                                } else {
+                                    echo 'An error occurred during login. Please try again.';
+                                }
+                                ?>
+                            </p>
+                        </div>
+                    </div>
+                <?php endif; ?>
+
                 <form method="POST" action="login_handler.php">
                     <!-- Email Address -->
                     <div class="mb-6">
@@ -124,8 +149,7 @@ if (isset($_SESSION['user']) && isset($_SESSION['user_id'])) {
                     <div class="mb-4">
                         <div class="flex justify-between items-center mb-2">
                             <label class="block text-gray-700 text-sm font-medium">Password</label>
-                            <a href="forgotPasswordEmail.php" class="text-blue-500 text-sm hover:underline">Forgot
-                                password?</a>
+                            
                         </div>
                         <input type="password" name="password" placeholder="••••••••" required
                             class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -139,7 +163,8 @@ if (isset($_SESSION['user']) && isset($_SESSION['user_id'])) {
                                 class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
                             <span class="ml-2 text-sm text-gray-600">Remember me</span>
                         </label>
-                        <a href="forgotPasswordEmail.php" class="text-blue-500 text-sm hover:underline">Need help?</a>
+                        <a href="forgotPasswordEmail.php" class="text-blue-500 text-sm hover:underline">Forgot
+                                password?</a>
                     </div>
 
                     <!-- Sign In Button -->
@@ -147,12 +172,6 @@ if (isset($_SESSION['user']) && isset($_SESSION['user_id'])) {
                         class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-lg transition mb-6">
                         Sign In
                     </button>
-
-                    <!-- Contact administrator -->
-                    <p class="text-center text-sm text-gray-600">
-                        Don't have an account? <a href="forgotPasswordEmail.php" class="text-blue-500 hover:underline">Contact
-                            administrator</a>
-                    </p>
                 </form>
 
                 <!-- System Information -->
@@ -172,7 +191,7 @@ if (isset($_SESSION['user']) && isset($_SESSION['user_id'])) {
                             <span class="text-sm text-gray-600">Last Update: 11/15/2025</span>
                             <div class="ml-auto">
                                 <div class="w-2 h-2 bg-pink-500 rounded-full inline-block"></div>
-                                <span class="text-sm text-gray-600 ml-2">Support: help.edu</span>
+                                <span class="text-sm text-gray-600 ml-2">Support: STIhelp.edu</span>
                             </div>
                         </div>
                     </div>
@@ -188,8 +207,7 @@ if (isset($_SESSION['user']) && isset($_SESSION['user_id'])) {
                     <div>
                         <h4 class="text-sm font-semibold text-gray-800 mb-1">Need assistance?</h4>
                         <p class="text-xs text-gray-600">If you're having trouble accessing your account, please contact
-                            the IT Helpdesk at <span class="text-blue-600">support@sti.edu</span> or call <span
-                                class="text-blue-600">1-800-900-STI</span></p>
+                            the IT Helpdesk at <span class="text-blue-600">support@sti.edu</span>
                     </div>
                 </div>
             </div>

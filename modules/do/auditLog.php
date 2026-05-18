@@ -301,6 +301,8 @@ function getActionColor($action) {
         // Check-In/Check-Out
         'Check-In Recorded' => 'bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300',
         'Check-Out Recorded' => 'bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300',
+        'Community Service Check-In Recorded' => 'bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300',
+        'Community Service Check-Out Recorded' => 'bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300',
         'Time Corrected (check_in)' => 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300',
         'Time Corrected (check_out)' => 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300',
         'Time Record Reverted (check_in)' => 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300',
@@ -398,6 +400,26 @@ function getActionColor($action) {
         padding: 0 !important;
         font-weight: 600;
     }
+}
+
+/* Force fixed table layout so column widths don't shift between pages */
+table.w-full {
+    table-layout: fixed;
+}
+
+/* Define stable column widths for the audit log table */
+table.w-full th:nth-child(1), table.w-full td:nth-child(1) { width: 8%; }
+table.w-full th:nth-child(2), table.w-full td:nth-child(2) { width: 22%; }
+table.w-full th:nth-child(3), table.w-full td:nth-child(3) { width: 12%; }
+table.w-full th:nth-child(4), table.w-full td:nth-child(4) { width: 30%; }
+table.w-full th:nth-child(5), table.w-full td:nth-child(5) { width: 14%; }
+table.w-full th:nth-child(6), table.w-full td:nth-child(6) { width: 14%; }
+
+/* Ensure content truncates cleanly inside fixed columns */
+table.w-full th, table.w-full td {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 </style>
 </head>

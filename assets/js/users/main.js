@@ -212,7 +212,14 @@ function renderUsers() {
     for (let i = 0; i < emptyRowsCount; i++) {
         tableHTML += `
             <tr class="h-[72px] border-b border-gray-100 dark:border-slate-700 border-l-4 border-l-transparent">
-                <td colspan="8"></td>
+                <td class="px-6 py-4"></td>
+                <td class="px-6 py-4"></td>
+                <td class="px-6 py-4"></td>
+                <td class="px-6 py-4"></td>
+                <td class="px-6 py-4"></td>
+                <td class="px-6 py-4"></td>
+                <td class="px-6 py-4"></td>
+                <td class="px-6 py-4"></td>
             </tr>
         `;
     }
@@ -221,7 +228,6 @@ function renderUsers() {
     updatePaginationInfo();
     updatePaginationButtons();
     syncCheckboxStates();
-    updatePageCheckboxState();
 }
 
 // ====== Sync Checkbox States ======
@@ -492,43 +498,29 @@ function updateSelectAllPageButtons() {
 }
 
 function updatePageCheckboxState() {
-    // Update the header checkbox to reflect current page's selection state
+    // Update the header checkbox to reflect current page's selection state (if it exists)
     const selectAllCheckbox = document.getElementById('selectAllCheckbox');
-    const totalCheckboxes = document.querySelectorAll('.user-checkbox').length;
-    const checkedCheckboxes = document.querySelectorAll('.user-checkbox:checked').length;
-    
-    selectAllCheckbox.checked = totalCheckboxes > 0 && totalCheckboxes === checkedCheckboxes;
-    selectAllCheckbox.indeterminate = checkedCheckboxes > 0 && checkedCheckboxes < totalCheckboxes;
-}
-
-function selectAllPages() {
-    // Check all visible checkboxes
-    document.querySelectorAll('.user-checkbox').forEach(checkbox => {
-        checkbox.checked = true;
-    });
-    document.getElementById('selectAllCheckbox').checked = true;
-    document.getElementById('selectAllCheckbox').indeterminate = false;
-    
-    // Manually select all users from allUsers since we're selecting across all pages
-    allUsers.forEach(user => selectedUserIds.add(user.user_id));
-    
-    updateBulkActionBar();
-    updateSelectAllPageButtons();
+    if (selectAllCheckbox) {
+        const totalCheckboxes = document.querySelectorAll('.user-checkbox').length;
+        const checkedCheckboxes = document.querySelectorAll('.user-checkbox:checked').length;
+        
+        selectAllCheckbox.checked = totalCheckboxes > 0 && totalCheckboxes === checkedCheckboxes;
+        selectAllCheckbox.indeterminate = checkedCheckboxes > 0 && checkedCheckboxes < totalCheckboxes;
+    }
 }
 
 function clearAllPages() {
     // Clear all visible checkboxes
     document.querySelectorAll('.user-checkbox').forEach(checkbox => {
         checkbox.checked = false;
+        checkbox.closest('tr').classList.remove('bg-blue-50', 'dark:bg-blue-900/20');
     });
-    document.getElementById('selectAllCheckbox').checked = false;
-    document.getElementById('selectAllCheckbox').indeterminate = false;
     
     // Manually clear all selections since we're clearing across all pages
     selectedUserIds.clear();
     
     updateBulkActionBar();
-    updateSelectAllPageButtons();
+    updatePageCheckboxState();
 }
 
 function updateSelection() {
@@ -538,29 +530,22 @@ function updateSelection() {
         
         if (checkbox.checked) {
             selectedUserIds.add(userId);
-            // Highlight the row
-            checkbox.closest('tr').classList.add('bg-blue-50', 'dark:bg-blue-900/20');
         } else {
             selectedUserIds.delete(userId);
-            // Remove highlight
-            checkbox.closest('tr').classList.remove('bg-blue-50', 'dark:bg-blue-900/20');
         }
     });
     
     updatePageCheckboxState();
     updateBulkActionBar();
+    // Re-render rows to sync highlight via template literal (not classList)
+    syncCheckboxStates();
 }
 
 function clearSelection() {
     selectedUserIds.clear();
-    document.getElementById('selectAllCheckbox').checked = false;
-    document.getElementById('selectAllCheckbox').indeterminate = false;
-    document.querySelectorAll('.user-checkbox').forEach(checkbox => {
-        checkbox.checked = false;
-    });
     updateBulkActionBar();
-    updateSelectAllPageButtons();
-    renderUsers();
+    updatePageCheckboxState();
+    renderUsers(); // Re-render so the tr template literal handles highlighting correctly
 }
 
 function updateBulkActionBar() {
@@ -582,6 +567,23 @@ function updateBulkActionBar() {
     }
     
     updateSelectAllPageButtons();
+}
+
+// Select all users on current page
+function selectThisPageOnly() {
+    document.querySelectorAll('.user-checkbox').forEach(checkbox => {
+        checkbox.checked = true;
+    });
+    updateSelection();
+}
+
+// Select all users across all pages
+function selectAllPages() {
+    allUsers.forEach(user => selectedUserIds.add(parseInt(user.user_id)));
+    // Only check visible boxes; don't call updateSelection() which reads unchecked DOM boxes
+    document.querySelectorAll('.user-checkbox').forEach(cb => cb.checked = true);
+    updatePageCheckboxState();
+    updateBulkActionBar();
 }
 
 // ====== Bulk Actions ======
@@ -640,8 +642,8 @@ async function performBulkAction(action, userIds) {
         
         if (data.success) {
             showMessage(data.message || 'Bulk action completed successfully', 'success');
-            clearSelection();
-            loadUsers();
+            selectedUserIds.clear();
+            loadUsers(); // This already resets everything and handles re-rendering
         } else {
             showMessage('Error: ' + (data.error || 'Unknown error'), 'error');
         }

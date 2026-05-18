@@ -36,10 +36,11 @@ try {
     $user = fetchOne($userSql, [$email]);
     
     if (!$user) {
-        // For security, return generic message (don't reveal if email exists or not)
+        // Email not found in database
+        http_response_code(404);
         echo json_encode([
-            'success' => true,
-            'message' => 'An admin will be notified to reset your password.'
+            'success' => false,
+            'error' => 'No account found with this email address.'
         ]);
         
         // Log the attempt for non-existent email

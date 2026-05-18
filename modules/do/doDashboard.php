@@ -204,7 +204,16 @@ $progressColors = generateCaseTypeColors($caseTypes);
                                     ?>
                                     <div class="flex items-center justify-between p-4 hover:bg-[#E0F2FE] dark:hover:bg-slate-700 transition-all duration-200 first:rounded-t-lg last:rounded-b-lg">
                                         <div class="flex items-center space-x-3 flex-1">
-                                            <div class="w-10 h-10 bg-gray-200 rounded-full flex-shrink-0"></div>
+                                            <div class="w-10 h-10 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex-shrink-0 flex items-center justify-center">
+                                                <span class="text-xs font-bold text-white"><?php 
+                                                    $names = explode(' ', $case['student_name']);
+                                                    $initials = strtoupper(substr($names[0], 0, 1));
+                                                    if (isset($names[1])) {
+                                                        $initials .= strtoupper(substr($names[1], 0, 1));
+                                                    }
+                                                    echo $initials;
+                                                ?></span>
+                                            </div>
                                             <div class="flex-1 min-w-0">
                                                 <p class="font-medium text-gray-800 dark:text-gray-100"><?php echo htmlspecialchars($case['student_name']); ?></p>
                                                 <p class="text-sm text-gray-500 dark:text-gray-400"><?php echo htmlspecialchars($case['case_type']); ?> • <?php echo htmlspecialchars($case['student_id']); ?></p>
@@ -292,7 +301,16 @@ $progressColors = generateCaseTypeColors($caseTypes);
                                     <?php foreach ($pendingCases as $case): ?>
                                     <div class="flex items-center justify-between p-4 hover:bg-[#E0F2FE] dark:hover:bg-slate-700 transition-all duration-200 first:rounded-t-lg last:rounded-b-lg">
                                         <div class="flex items-center space-x-3 flex-1">
-                                            <div class="w-10 h-10 bg-gray-200 rounded-full flex-shrink-0"></div>
+                                            <div class="w-10 h-10 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex-shrink-0 flex items-center justify-center">
+                                                <span class="text-xs font-bold text-white"><?php 
+                                                    $names = explode(' ', $case['student_name']);
+                                                    $initials = strtoupper(substr($names[0], 0, 1));
+                                                    if (isset($names[1])) {
+                                                        $initials .= strtoupper(substr($names[1], 0, 1));
+                                                    }
+                                                    echo $initials;
+                                                ?></span>
+                                            </div>
                                             <div class="flex-1 min-w-0">
                                                 <p class="font-medium text-gray-800 dark:text-gray-100"><?php echo htmlspecialchars($case['student_name']); ?></p>
                                                 <p class="text-sm text-gray-500 dark:text-gray-400"><?php echo htmlspecialchars($case['case_type']); ?> • <?php echo htmlspecialchars($case['student_number']); ?></p>
