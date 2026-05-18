@@ -102,10 +102,11 @@ function createDayCell(day, isOtherMonth, date) {
     cell.className = `min-h-[120px] p-2 ${isOtherMonth ? 'bg-gray-50 dark:bg-slate-800/50' : 'bg-white dark:bg-[#111827]'} hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors cursor-pointer`;
     
     const dayNumber = document.createElement('div');
-    dayNumber.className = `text-sm font-medium mb-2 ${isOtherMonth ? 'text-gray-400' : 'text-gray-700 dark:text-gray-300'}`;
-    if (isToday) {
-        dayNumber.className += ' inline-flex items-center justify-center w-7 h-7 bg-blue-600 text-white rounded-full';
-    }
+    dayNumber.className = `text-sm font-medium mb-2 ${isToday
+        ? 'inline-flex items-center justify-center w-7 h-7 bg-blue-600 text-white rounded-full'
+        : isOtherMonth
+            ? 'text-gray-400'
+            : 'text-gray-700 dark:text-gray-300'}`;
     dayNumber.textContent = day;
     cell.appendChild(dayNumber);
     
