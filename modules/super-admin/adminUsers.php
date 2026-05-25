@@ -9,7 +9,7 @@ if ($_SESSION['user_role'] !== 'super_admin') {
     exit;
 }
 
-// Handle CSV Import for Teachers
+// Handle CSV Import for Users
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import_csv'])) {
     header('Content-Type: application/json');
 
@@ -59,8 +59,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import_csv'])) {
             $data = array_combine($header, $row);
 
             // Validate required fields
-            if (empty($data['first_name']) || empty($data['last_name'])) {
-                $errors[] = "Row skipped: Missing required fields (first_name or last_name)";
+            if (empty($data['first_name']) || empty($data['last_name']) || empty($data['role'])) {
+                $errors[] = "Row skipped: Missing required fields (first_name, last_name, or role)";
                 $skipped++;
                 continue;
             }
@@ -79,26 +79,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import_csv'])) {
                     $counter++;
                 }
 
-                // Create user account for the teacher
+                // Create user account for the user
                 $fullName = trim($data['first_name'] . ' ' . ($data['middle_name'] ?? '') . ' ' . $data['last_name']);
                 $username = $email; // Use email as username
-                $defaultPassword = 'password'; // Default password for all teachers
+                $defaultPassword = 'password'; // Default password for all users
                 $passwordHash = password_hash($defaultPassword, PASSWORD_DEFAULT);
 
                 // Insert user account
                 $userSql = "INSERT INTO users (username, password_hash, email, full_name, role, contact_number, is_active, created_at)
-                            VALUES (?, ?, ?, ?, 'teacher', ?, 1, GETDATE())";
+                            VALUES (?, ?, ?, ?, ?, ?, 1, GETDATE())";
                 executeQuery($userSql, [
                     $username,
                     $passwordHash,
                     $email,
                     $fullName,
+                    $data['role'],
                     $data['contact_number'] ?? null
                 ]);
 
                 $imported++;
             } catch (Exception $e) {
-                $errors[] = "Error importing teacher: " . $e->getMessage();
+                $errors[] = "Error importing user: " . $e->getMessage();
                 $skipped++;
             }
         }
@@ -194,8 +195,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
                 
                 // Apply status filter if set
                 if ($status !== '') {
-                    $sql .= " AND COALESCE(u.is_active, 1) = ?";
-                    $params[] = $status === 'active' ? 1 : 0;
+                    if ($status === 'pending_reset') {
+                        $sql .= " AND u.user_id IS NOT NULL AND EXISTS(
+                            SELECT 1 FROM notifications n 
+                            WHERE n.type = 'password_reset_request' 
+                            AND n.is_read = 0
+                            AND CAST(SUBSTRING(n.related_id, CHARINDEX(':', n.related_id) + 1, LEN(n.related_id)) AS INT) = u.user_id
+                        )";
+                    } else {
+                        $sql .= " AND COALESCE(u.is_active, 1) = ?";
+                        $params[] = $status === 'active' ? 1 : 0;
+                    }
                 }
             } else {
                 // Regular user search
@@ -236,8 +246,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
                 }
 
                 if ($status !== '') {
-                    $sql .= " AND is_active = ?";
-                    $params[] = $status === 'active' ? 1 : 0;
+                    if ($status === 'pending_reset') {
+                        $sql .= " AND EXISTS(
+                            SELECT 1 FROM notifications n 
+                            WHERE n.type = 'password_reset_request' 
+                            AND n.is_read = 0
+                            AND CAST(SUBSTRING(n.related_id, CHARINDEX(':', n.related_id) + 1, LEN(n.related_id)) AS INT) = u.user_id
+                        )";
+                    } else {
+                        $sql .= " AND is_active = ?";
+                        $params[] = $status === 'active' ? 1 : 0;
+                    }
                 }
             }
 
@@ -714,13 +733,13 @@ $adminName = getFormattedUserName();
                     </div>
 
                     <div class="flex items-center gap-3">
-                        <button onclick="openImportTeachersModal()"
+                        <button onclick="openImportUsersModal()"
                             class="px-4 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center gap-2">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                             </svg>
-                            Import Teachers
+                            Import Users
                         </button>
 
                         <button onclick="openAddModal()"
@@ -750,6 +769,7 @@ $adminName = getFormattedUserName();
                         <option value="">All Status</option>
                         <option value="active">Active</option>
                         <option value="inactive">Inactive</option>
+                        <option value="pending_reset">Pending Password Reset</option>
                     </select>
 
                     <button onclick="loadUsers()"
@@ -852,12 +872,12 @@ $adminName = getFormattedUserName();
         </div>
     </div>
 
-    <!-- Import Teachers Modal -->
-    <div id="importTeachersModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <!-- Import Users Modal -->
+    <div id="importUsersModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
         <div class="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-2xl w-full p-6">
             <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Import Teachers from CSV</h3>
-                <button onclick="closeImportTeachersModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Import Users from CSV</h3>
+                <button onclick="closeImportUsersModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                     </svg>
@@ -868,39 +888,40 @@ $adminName = getFormattedUserName();
                 <h4 class="font-semibold text-blue-900 dark:text-blue-300 mb-2">CSV Format Requirements:</h4>
                 <p class="text-sm text-blue-800 dark:text-blue-400 mb-2">The CSV file must have the following columns:</p>
                 <code class="text-xs bg-white dark:bg-slate-900 px-2 py-1 rounded block overflow-x-auto">
-                    first_name, last_name, middle_name, contact_number
+                    first_name, last_name, middle_name, contact_number, role
                 </code>
-                <p class="text-xs text-blue-700 dark:text-blue-400 mt-2">* Required fields: first_name, last_name</p>
+                <p class="text-xs text-blue-700 dark:text-blue-400 mt-2">* Required fields: first_name, last_name, role</p>
                 <p class="text-xs text-blue-700 dark:text-blue-400 mt-1">* Email will be auto-generated as: firstname.lastname@sti.edu</p>
+                <p class="text-xs text-blue-700 dark:text-blue-400 mt-1">* Valid roles: teacher, discipline_office, security, student, super_admin</p>
                 <p class="text-xs text-blue-700 dark:text-blue-400 mt-1">* Default password: password</p>
             </div>
 
-            <form id="importTeachersForm" enctype="multipart/form-data">
+            <form id="importUsersForm" enctype="multipart/form-data">
                 <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Select CSV File
                     </label>
-                    <input type="file" id="teachersCsvFile" name="csv_file" accept=".csv" required
+                    <input type="file" id="usersCsvFile" name="csv_file" accept=".csv" required
                         class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 outline-none file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900/20 dark:file:text-blue-400">
                 </div>
 
-                <div id="importTeachersProgress" class="hidden mb-4">
+                <div id="importUsersProgress" class="hidden mb-4">
                     <div class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
                         <svg class="animate-spin h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24">
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
-                        <span>Importing teachers...</span>
+                        <span>Importing users...</span>
                     </div>
                 </div>
 
-                <div id="importTeachersResult" class="hidden mb-4"></div>
+                <div id="importUsersResult" class="hidden mb-4"></div>
 
                 <div class="flex gap-3">
-                    <button type="submit" id="importTeachersBtn" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors">
+                    <button type="submit" id="importUsersBtn" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors">
                         Upload and Import
                     </button>
-                    <button type="button" onclick="closeImportTeachersModal()" class="px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                    <button type="button" onclick="closeImportUsersModal()" class="px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
                         Cancel
                     </button>
                 </div>
@@ -913,23 +934,23 @@ $adminName = getFormattedUserName();
     <script src="/PrototypeDO/assets/js/protect_pages.js"></script>
 
     <script>
-        // Teacher CSV Import Functions
-        function openImportTeachersModal() {
-            document.getElementById('importTeachersModal').classList.remove('hidden');
-            document.getElementById('importTeachersForm').reset();
-            document.getElementById('importTeachersProgress').classList.add('hidden');
-            document.getElementById('importTeachersResult').classList.add('hidden');
-            document.getElementById('importTeachersBtn').disabled = false;
+        // User CSV Import Functions
+        function openImportUsersModal() {
+            document.getElementById('importUsersModal').classList.remove('hidden');
+            document.getElementById('importUsersForm').reset();
+            document.getElementById('importUsersProgress').classList.add('hidden');
+            document.getElementById('importUsersResult').classList.add('hidden');
+            document.getElementById('importUsersBtn').disabled = false;
         }
 
-        function closeImportTeachersModal() {
-            document.getElementById('importTeachersModal').classList.add('hidden');
+        function closeImportUsersModal() {
+            document.getElementById('importUsersModal').classList.add('hidden');
         }
 
-        document.getElementById('importTeachersForm').addEventListener('submit', async function(e) {
+        document.getElementById('importUsersForm').addEventListener('submit', async function(e) {
             e.preventDefault();
 
-            const fileInput = document.getElementById('teachersCsvFile');
+            const fileInput = document.getElementById('usersCsvFile');
             if (!fileInput.files.length) {
                 alert('Please select a file');
                 return;
@@ -939,9 +960,9 @@ $adminName = getFormattedUserName();
             formData.append('csv_file', fileInput.files[0]);
             formData.append('import_csv', true);
 
-            document.getElementById('importTeachersProgress').classList.remove('hidden');
-            document.getElementById('importTeachersResult').classList.add('hidden');
-            document.getElementById('importTeachersBtn').disabled = true;
+            document.getElementById('importUsersProgress').classList.remove('hidden');
+            document.getElementById('importUsersResult').classList.add('hidden');
+            document.getElementById('importUsersBtn').disabled = true;
 
             try {
                 const response = await fetch('/PrototypeDO/modules/super-admin/adminUsers.php', {
@@ -951,14 +972,14 @@ $adminName = getFormattedUserName();
 
                 const result = await response.json();
 
-                document.getElementById('importTeachersProgress').classList.add('hidden');
+                document.getElementById('importUsersProgress').classList.add('hidden');
 
                 if (result.success) {
-                    const resultDiv = document.getElementById('importTeachersResult');
+                    const resultDiv = document.getElementById('importUsersResult');
                     let html = `<div class="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
                         <h4 class="font-semibold text-green-900 dark:text-green-300 mb-2">Import Completed!</h4>
                         <p class="text-sm text-green-800 dark:text-green-400">
-                            ✓ ${result.imported} teacher(s) imported successfully
+                            ✓ ${result.imported} user(s) imported successfully
                         </p>`;
                     
                     if (result.skipped > 0) {
@@ -979,12 +1000,12 @@ $adminName = getFormattedUserName();
 
                     if (result.imported > 0) {
                         setTimeout(() => {
-                            closeImportTeachersModal();
+                            closeImportUsersModal();
                             loadUsers();
                         }, 2000);
                     }
                 } else {
-                    const resultDiv = document.getElementById('importTeachersResult');
+                    const resultDiv = document.getElementById('importUsersResult');
                     resultDiv.innerHTML = `<div class="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
                         <h4 class="font-semibold text-red-900 dark:text-red-300 mb-2">Import Failed</h4>
                         <p class="text-sm text-red-800 dark:text-red-400">${result.error}</p>
@@ -992,15 +1013,15 @@ $adminName = getFormattedUserName();
                     resultDiv.classList.remove('hidden');
                 }
             } catch (error) {
-                document.getElementById('importTeachersProgress').classList.add('hidden');
-                const resultDiv = document.getElementById('importTeachersResult');
+                document.getElementById('importUsersProgress').classList.add('hidden');
+                const resultDiv = document.getElementById('importUsersResult');
                 resultDiv.innerHTML = `<div class="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
                     <h4 class="font-semibold text-red-900 dark:text-red-300 mb-2">Error</h4>
                     <p class="text-sm text-red-800 dark:text-red-400">${error.message}</p>
                 </div>`;
                 resultDiv.classList.remove('hidden');
             } finally {
-                document.getElementById('importTeachersBtn').disabled = false;
+                document.getElementById('importUsersBtn').disabled = false;
             }
         });
     </script>

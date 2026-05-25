@@ -550,20 +550,298 @@ function archiveItem($item_id) {
 }
 
 /**
- * Get available categories
+ * Get available categories from database
  */
 function getCategories() {
-    return [
-        'Electronics',
-        'Books',
-        'Accessories',
-        'Clothing',
-        'ID/Documents',
-        'Keys',
-        'Sports Equipment',
-        'Personal Items',
-        'School Supplies',
-        'Others'
-    ];
+    $sql = "SELECT category_name FROM lost_found_categories WHERE is_active = 1 ORDER BY category_name";
+    
+    try {
+        $categories = fetchAll($sql);
+        
+        // Extract just the category names
+        $categoryNames = [];
+        foreach ($categories as $cat) {
+            $categoryNames[] = $cat['category_name'];
+        }
+        
+        return $categoryNames;
+    } catch (Exception $e) {
+        error_log("getCategories error: " . $e->getMessage());
+        // Return default categories as fallback
+        return [
+            'Electronics',
+            'Books',
+            'Accessories',
+            'Clothing',
+            'ID/Documents',
+            'Keys',
+            'Sports Equipment',
+            'Personal Items',
+            'School Supplies',
+            'Others'
+        ];
+    }
+}
+
+/**
+ * Get all categories with full details
+ */
+function getAllCategories($includeInactive = false) {
+    $sql = "SELECT * FROM lost_found_categories";
+    
+    if (!$includeInactive) {
+        $sql .= " WHERE is_active = 1";
+    }
+    
+    $sql .= " ORDER BY category_name";
+    
+    try {
+        return fetchAll($sql);
+    } catch (Exception $e) {
+        error_log("getAllCategories error: " . $e->getMessage());
+        return [];
+    }
+}
+
+/**
+ * Add a new category
+ */
+function addCategory($categoryName, $description = null) {
+    // Validate input
+    $categoryName = trim($categoryName);
+    if (empty($categoryName)) {
+        return [
+            'success' => false,
+            'message' => 'Category name cannot be empty'
+        ];
+    }
+    
+    // Check for duplicates (case-insensitive)
+    $sql = "SELECT COUNT(*) as count FROM lost_found_categories WHERE LOWER(category_name) = LOWER(?)";
+    try {
+        $result = fetchOne($sql, [$categoryName]);
+        if ($result && $result['count'] > 0) {
+            return [
+                'success' => false,
+                'message' => 'Category already exists'
+            ];
+        }
+    } catch (Exception $e) {
+        error_log("addCategory duplicate check error: " . $e->getMessage());
+        return [
+            'success' => false,
+            'message' => 'Database error occurred'
+        ];
+    }
+    
+    // Insert new category
+    $sql = "INSERT INTO lost_found_categories (category_name, description) VALUES (?, ?)";
+    try {
+        executeQuery($sql, [$categoryName, $description]);
+        
+        // 🧾 Audit Log
+        auditCategoryAdded($categoryName, $description);
+        
+        return [
+            'success' => true,
+            'message' => 'Category added successfully',
+            'category_name' => $categoryName
+        ];
+    } catch (Exception $e) {
+        error_log("addCategory error: " . $e->getMessage());
+        return [
+            'success' => false,
+            'message' => 'Failed to add category: ' . $e->getMessage()
+        ];
+    }
+}
+
+/**
+ * Update a category
+ */
+function updateCategory($categoryId, $categoryName, $description = null) {
+    // Validate input
+    $categoryName = trim($categoryName);
+    if (empty($categoryName)) {
+        return [
+            'success' => false,
+            'message' => 'Category name cannot be empty'
+        ];
+    }
+    
+    // Check for duplicate names (excluding current category)
+    $sql = "SELECT COUNT(*) as count FROM lost_found_categories WHERE category_name = ? AND category_id != ?";
+    try {
+        $result = fetchOne($sql, [$categoryName, $categoryId]);
+        if ($result && $result['count'] > 0) {
+            return [
+                'success' => false,
+                'message' => 'Category name already exists'
+            ];
+        }
+    } catch (Exception $e) {
+        error_log("updateCategory duplicate check error: " . $e->getMessage());
+    }
+    
+    // Update category
+    $sql = "UPDATE lost_found_categories SET category_name = ?, description = ?, updated_at = GETDATE() WHERE category_id = ?";
+    try {
+        executeQuery($sql, [$categoryName, $description, $categoryId]);
+        
+        // 🧾 Audit Log
+        auditCategoryUpdated($categoryId, $categoryName);
+        
+        return [
+            'success' => true,
+            'message' => 'Category updated successfully'
+        ];
+    } catch (Exception $e) {
+        error_log("updateCategory error: " . $e->getMessage());
+        return [
+            'success' => false,
+            'message' => 'Failed to update category: ' . $e->getMessage()
+        ];
+    }
+}
+
+/**
+ * Deactivate a category
+ */
+function deactivateCategory($categoryId) {
+    $sql = "UPDATE lost_found_categories SET is_active = 0, updated_at = GETDATE() WHERE category_id = ?";
+    try {
+        executeQuery($sql, [$categoryId]);
+        
+        // 🧾 Audit Log
+        auditCategoryDeactivated($categoryId);
+        
+        return [
+            'success' => true,
+            'message' => 'Category deactivated successfully'
+        ];
+    } catch (Exception $e) {
+        error_log("deactivateCategory error: " . $e->getMessage());
+        return [
+            'success' => false,
+            'message' => 'Failed to deactivate category: ' . $e->getMessage()
+        ];
+    }
+}
+
+/**
+ * Reactivate a category
+ */
+function reactivateCategory($categoryId) {
+    $sql = "UPDATE lost_found_categories SET is_active = 1, updated_at = GETDATE() WHERE category_id = ?";
+    try {
+        executeQuery($sql, [$categoryId]);
+        
+        // 🧾 Audit Log
+        auditCategoryReactivated($categoryId);
+        
+        return [
+            'success' => true,
+            'message' => 'Category reactivated successfully'
+        ];
+    } catch (Exception $e) {
+        error_log("reactivateCategory error: " . $e->getMessage());
+        return [
+            'success' => false,
+            'message' => 'Failed to reactivate category: ' . $e->getMessage()
+        ];
+    }
+}
+
+/**
+ * Get category by ID
+ */
+function getCategoryById($categoryId) {
+    $sql = "SELECT * FROM lost_found_categories WHERE category_id = ?";
+    try {
+        return fetchOne($sql, [$categoryId]);
+    } catch (Exception $e) {
+        error_log("getCategoryById error: " . $e->getMessage());
+        return null;
+    }
+}
+
+/**
+ * Audit log for category added
+ */
+function auditCategoryAdded($categoryName, $description = null) {
+    $userId = $_SESSION['user_id'] ?? null;
+    
+    $sql = "INSERT INTO audit_logs (user_id, module, action, old_value, new_value, notes)
+            VALUES (?, 'Lost & Found Categories', 'ADD_CATEGORY', NULL, ?, ?)";
+    
+    try {
+        executeQuery($sql, [
+            $userId,
+            $categoryName,
+            $description ?? ''
+        ]);
+    } catch (Exception $e) {
+        error_log("auditCategoryAdded error: " . $e->getMessage());
+    }
+}
+
+/**
+ * Audit log for category updated
+ */
+function auditCategoryUpdated($categoryId, $categoryName) {
+    $userId = $_SESSION['user_id'] ?? null;
+    
+    $sql = "INSERT INTO audit_logs (user_id, module, action, old_value, new_value)
+            VALUES (?, 'Lost & Found Categories', 'UPDATE_CATEGORY', ?, ?)";
+    
+    try {
+        executeQuery($sql, [
+            $userId,
+            'Category ID: ' . $categoryId,
+            $categoryName
+        ]);
+    } catch (Exception $e) {
+        error_log("auditCategoryUpdated error: " . $e->getMessage());
+    }
+}
+
+/**
+ * Audit log for category deactivated
+ */
+function auditCategoryDeactivated($categoryId) {
+    $userId = $_SESSION['user_id'] ?? null;
+    
+    $sql = "INSERT INTO audit_logs (user_id, module, action, old_value, new_value)
+            VALUES (?, 'Lost & Found Categories', 'DEACTIVATE_CATEGORY', ?, ?)";
+    
+    try {
+        executeQuery($sql, [
+            $userId,
+            'Category ID: ' . $categoryId,
+            'Deactivated'
+        ]);
+    } catch (Exception $e) {
+        error_log("auditCategoryDeactivated error: " . $e->getMessage());
+    }
+}
+
+/**
+ * Audit log for category reactivated
+ */
+function auditCategoryReactivated($categoryId) {
+    $userId = $_SESSION['user_id'] ?? null;
+    
+    $sql = "INSERT INTO audit_logs (user_id, module, action, old_value, new_value)
+            VALUES (?, 'Lost & Found Categories', 'REACTIVATE_CATEGORY', ?, ?)";
+    
+    try {
+        executeQuery($sql, [
+            $userId,
+            'Category ID: ' . $categoryId,
+            'Reactivated'
+        ]);
+    } catch (Exception $e) {
+        error_log("auditCategoryReactivated error: " . $e->getMessage());
+    }
 }
 ?>

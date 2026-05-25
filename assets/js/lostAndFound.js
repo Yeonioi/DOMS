@@ -697,4 +697,106 @@ function showNotification(title, message, type = 'info') {
 document.addEventListener('DOMContentLoaded', () => {
     setupImageUpload();
     setupLostFoundFilters();
+    setupCategoryHandling();
 });
+
+// Handle category selection and new category input
+function setupCategoryHandling() {
+    const categorySelect = document.getElementById('categorySelect');
+    const newCategoryDiv = document.getElementById('newCategoryDiv');
+    const newCategoryInput = document.getElementById('newCategoryInput');
+    
+    if (!categorySelect) return;
+    
+    categorySelect.addEventListener('change', function() {
+        if (this.value === '__add_new__') {
+            // Show new category input
+            newCategoryDiv.classList.remove('hidden');
+            newCategoryInput.focus();
+            // Clear the select
+            this.value = '';
+        } else {
+            // Hide new category input
+            newCategoryDiv.classList.add('hidden');
+            newCategoryInput.value = '';
+        }
+    });
+}
+
+// Create new category
+async function createNewCategory() {
+    const categorySelect = document.getElementById('categorySelect');
+    const filterSelect = document.getElementById('lostFoundCategoryFilter');
+    const newCategoryInput = document.getElementById('newCategoryInput');
+    const newCategoryDescription = document.getElementById('newCategoryDescription');
+    const newCategoryDiv = document.getElementById('newCategoryDiv');
+    const categoryName = newCategoryInput.value.trim();
+    
+    if (!categoryName) {
+        alert('Please enter a category name');
+        newCategoryInput.focus();
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('action', 'add_category');
+    formData.append('category_name', categoryName);
+    formData.append('description', newCategoryDescription.value.trim());
+    
+    try {
+        const response = await fetch('/PrototypeDO/modules/do/lostAndFoundAPI.php', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // Use canonical category name from server
+            const canonicalName = result.category_name || categoryName;
+            
+            // Add new option to item form select
+            const newOption = document.createElement('option');
+            newOption.value = canonicalName;
+            newOption.textContent = canonicalName;
+            newOption.selected = true;
+            
+            // Insert before the "Add New Category" option
+            const addNewOption = categorySelect.querySelector('option[value="__add_new__"]');
+            categorySelect.insertBefore(newOption, addNewOption);
+            
+            // Also add to filter dropdown if it exists
+            if (filterSelect) {
+                const filterOption = document.createElement('option');
+                filterOption.value = canonicalName;
+                filterOption.textContent = canonicalName;
+                filterSelect.appendChild(filterOption);
+            }
+            
+            // Hide the input and clear it
+            newCategoryDiv.classList.add('hidden');
+            newCategoryInput.value = '';
+            newCategoryDescription.value = '';
+            
+            showNotification('Success!', `Category "${canonicalName}" created successfully`, 'success');
+        } else {
+            showNotification('Error', result.message, 'error');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showNotification('Error', 'Failed to create category', 'error');
+    }
+}
+
+// Cancel new category creation
+function cancelNewCategory() {
+    const categorySelect = document.getElementById('categorySelect');
+    const newCategoryDiv = document.getElementById('newCategoryDiv');
+    const newCategoryInput = document.getElementById('newCategoryInput');
+    const newCategoryDescription = document.getElementById('newCategoryDescription');
+    
+    newCategoryDiv.classList.add('hidden');
+    newCategoryInput.value = '';
+    newCategoryDescription.value = '';
+    categorySelect.value = '';
+}
