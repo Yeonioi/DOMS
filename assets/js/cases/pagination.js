@@ -38,17 +38,19 @@ function renderCases() {
             </td>
             <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">${c.type}</td>
             <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">${c.date}</td>
+            <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">${c.assignedTo || 'Unassigned'}</td>
             <td class="px-6 py-4 text-sm">
                 <span class="px-2.5 py-1 text-xs font-medium rounded ${statusColors[c.statusColor]}">${c.status}</span>
             </td>
-            <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">${c.assignedTo}</td>
-            <td class="px-6 py-4 text-sm">
+            <td class="pl-0 pr-2 py-4 text-sm">
+                <div class="flex items-center gap-0.5 -ml-3">
                 ${currentTab === 'archived' 
                     ? `<button onclick="unarchiveCase('${c.id}')" class="text-green-600 dark:text-green-400 hover:underline mr-3">Restore</button>`
                     : `<button onclick="viewCase('${c.id}')" class="text-blue-600 dark:text-blue-400 hover:underline mr-3">View</button>
                        ${String(c.status || '').toLowerCase() !== 'resolved' ? `<button onclick="manageSanctions('${c.id}')" class="text-blue-600 dark:text-blue-400 hover:underline mr-3">Sanctions</button>` : ''}
                        ${c.status !== 'Resolved' ? `<span class="text-gray-300 dark:text-gray-600 mx-2">|</span><button onclick="markCaseResolved('${c.id}')" title="${getCaseResolutionBlockReason(c) || 'Mark this case as resolved'}" class="text-green-600 dark:text-green-400 hover:underline font-medium">Mark Resolved</button>` : ''}`
                 }
+                </div>
             </td>
         </tr>
     `).join('');

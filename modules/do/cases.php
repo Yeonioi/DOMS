@@ -424,6 +424,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['ajax']) || isset($_P
                 );
                 $hasNewCommunityServiceSubmission = intval($newSubmissionCountRow['cnt'] ?? 0) > 0;
 
+                $correctivePortfolioCountRow = fetchOne(
+                    "SELECT COUNT(*) AS cnt
+                     FROM community_service_submissions css
+                     JOIN case_sanctions cs ON cs.case_sanction_id = css.case_sanction_id
+                     JOIN sanctions s ON s.sanction_id = cs.sanction_id
+                     WHERE css.case_id = ?
+                       AND LOWER(s.sanction_name) LIKE '%corrective%'",
+                    [$case['case_id']]
+                );
+                $hasCorrectivePortfolioSubmission = intval($correctivePortfolioCountRow['cnt'] ?? 0) > 0;
+
                 return [
                     'id' => $case['case_id'],
                     'student' => $case['student_name'],
@@ -439,6 +450,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['ajax']) || isset($_P
                     'attachments' => $attachments,
                     'hasCorrectiveService' => $hasCorrectiveService,
                     'hasCorrectiveServiceCompleted' => $hasCorrectiveServiceCompleted,
+                    'hasCorrectivePortfolioSubmission' => $hasCorrectivePortfolioSubmission,
                     'hasNewCommunityServiceSubmission' => $hasNewCommunityServiceSubmission,
                     'hasSuspensionFromClass' => $hasSuspensionFromClass,
                     'hasSuspensionFromClassCompleted' => $hasSuspensionFromClassCompleted
@@ -1893,12 +1905,13 @@ $adminName = getFormattedUserName() ?? 'User';
                     <table class="w-full table-fixed">
                         <thead class="bg-gray-100 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700">
                             <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider w-28">Case ID</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider w-48">Student</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider w-48">Type</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider w-36">Date Reported</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider w-32">Status</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider w-56">Actions</th>
+                                <th class="px-5 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider w-28">Case ID</th>
+                                <th class="px-5 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider w-48">Student</th>
+                                <th class="pl-5 pr-2 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider w-48">Type</th>
+                                <th class="pl-2 pr-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider w-28">Date Reported</th>
+                                <th class="pl-4 pr-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider w-36">Assigned to</th>
+                                <th class="pl-4 pr-1 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider w-32">Status</th>
+                                <th class="pl-0 pr-2 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider w-56">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="casesTableBody"

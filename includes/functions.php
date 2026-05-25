@@ -2712,9 +2712,32 @@ function getCaseResolutionEligibility($caseId) {
         if ($required > 0 && $done < $required) {
             return [
                 'can_resolve' => false,
-                'error' => 'Community service is not complete.'
+                'error' => 'Check-in is not complete.'
             ];
         }
+    }
+
+    $missingCorrectivePortfolioRow = fetchOne(
+        "SELECT COUNT(*) AS cnt
+         FROM case_sanctions cs
+         JOIN sanctions s ON cs.sanction_id = s.sanction_id
+         WHERE cs.case_id = ?
+           AND LOWER(s.sanction_name) LIKE '%corrective%'
+           AND cs.duration_days > 0
+           AND NOT EXISTS (
+               SELECT 1
+               FROM community_service_submissions css
+               WHERE css.case_id = cs.case_id
+                 AND css.case_sanction_id = cs.case_sanction_id
+           )",
+        [$caseId]
+    );
+
+    if (intval($missingCorrectivePortfolioRow['cnt'] ?? 0) > 0) {
+        return [
+            'can_resolve' => false,
+            'error' => 'Student has not submitted a completion report'
+        ];
     }
 
     $suspensionSql = "SELECT cs.duration_days, cs.applied_date

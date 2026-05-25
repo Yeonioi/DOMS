@@ -868,6 +868,10 @@ async function openCheckInModal(caseId, sanctionType = 'corrective') {
   // Prevent stacked/duplicate check-in modals when refreshing after actions.
   document.querySelectorAll('[data-checkin-modal="true"]').forEach(existingModal => existingModal.remove());
 
+  const modalState = window.__casesModalState || (window.__casesModalState = {});
+  const openToken = Symbol(`checkIn:${caseId}:${sanctionType}`);
+  modalState.checkIn = openToken;
+
   const caseData = allCases.find(c => c.id === caseId);
   if (!caseData) return;
 
@@ -875,6 +879,7 @@ async function openCheckInModal(caseId, sanctionType = 'corrective') {
 
   // Load sanctions for this case and filter to selected type with duration_days > 0.
   const sanctions = await loadAppliedSanctionsForView(caseId);
+  if (modalState.checkIn !== openToken) return;
   const selectedTypeSanctions = sanctions.filter((s) => {
     const matchesType = matchesSanctionTypeByName(s?.sanction_name || '', sanctionType);
     const totalDays = getEffectiveDurationDays(s, sanctionType);
@@ -907,6 +912,8 @@ async function openCheckInModal(caseId, sanctionType = 'corrective') {
         : [];
       activeSanction.new_portfolio_submission_count = parseInt(activeSanction.new_portfolio_submission_count || 0, 10) || 0;
     }
+
+    if (modalState.checkIn !== openToken) return;
 
     const totalDays = getEffectiveDurationDays(activeSanction, 'suspension');
     const completedDays = calculateElapsedSuspensionDays(activeSanction.applied_date, totalDays);
@@ -948,6 +955,7 @@ async function openCheckInModal(caseId, sanctionType = 'corrective') {
       body: `ajax=1&action=getCheckInHistory&caseId=${caseId}`
     });
     const result = await response.json();
+    if (modalState.checkIn !== openToken) return;
     
     if (!result.success || !result.sanctions.length) {
       // Fallback to UI demo
@@ -993,6 +1001,7 @@ async function openCheckInModal(caseId, sanctionType = 'corrective') {
     }
   }
 
+  if (modalState.checkIn !== openToken) return;
   document.body.appendChild(modal);
 }
 
@@ -2009,8 +2018,8 @@ function buildCheckInPrintHTML(caseId, studentName, sanctionName, totalDays, tot
 
     <style>
       @media print {
-        body > * { display: none !important; }
-        #print-root, #print-root * { display: block !important; }
+        body > :not(#print-root) { display: none !important; }
+        #print-root { display: block !important; }
       }
     </style>
   `;

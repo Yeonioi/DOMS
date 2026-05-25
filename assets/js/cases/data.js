@@ -52,7 +52,11 @@ function getCaseResolutionBlockReason(caseData) {
     if (!caseData) return 'Case data not found.';
 
     if (caseData.hasCorrectiveService && !caseData.hasCorrectiveServiceCompleted) {
-        return 'Cannot mark as resolved: Community service is not complete.';
+        return 'Cannot mark as resolved: Check-in is not complete.';
+    }
+
+    if (caseData.hasCorrectiveService && caseData.hasCorrectivePortfolioSubmission === false) {
+        return 'Cannot mark as resolved: Student has not submitted a completion report.';
     }
 
     if (caseData.hasSuspensionFromClass && !caseData.hasSuspensionFromClassCompleted) {

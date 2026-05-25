@@ -1,7 +1,6 @@
 // Global variables
 let allEvents = [];
 let currentDate = new Date();
-let currentView = 'month';
 
 // Month names
 const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
@@ -40,17 +39,6 @@ function goToToday() {
     currentDate = new Date();
     renderCalendar();
     loadEvents();
-}
-
-function switchView(view) {
-    currentView = view;
-    document.getElementById('weekBtn').className = view === 'week' 
-        ? 'px-4 py-2 text-sm bg-blue-600 text-white rounded-lg'
-        : 'px-4 py-2 text-sm border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors';
-    document.getElementById('monthBtn').className = view === 'month'
-        ? 'px-4 py-2 text-sm bg-blue-600 text-white rounded-lg'
-        : 'px-4 py-2 text-sm border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors';
-    renderCalendar();
 }
 
 // Render calendar
@@ -228,7 +216,7 @@ function renderUpcomingEvents() {
             return eventDate >= today;
         })
         .sort((a, b) => new Date(a.date) - new Date(b.date))
-        .slice(0, 4);
+        .slice(0, 3);
     
     const list = document.getElementById('upcomingEventsList');
     
@@ -258,6 +246,59 @@ function renderUpcomingEvents() {
             </div>
         `;
     }).join('');
+}
+
+function openUpcomingEventsModal() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const upcoming = allEvents
+        .filter(e => {
+            const eventDate = new Date(e.date + 'T00:00:00');
+            return eventDate >= today;
+        })
+        .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4';
+    modal.innerHTML = `
+        <div class="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-2xl p-6 max-h-[80vh] overflow-y-auto">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Upcoming Events</h3>
+                <button onclick="this.closest('.fixed').remove()" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="space-y-3">
+                ${upcoming.length === 0 ? '<p class="text-sm text-gray-500 dark:text-gray-400">No upcoming events</p>' : upcoming.map(event => {
+                    const colors = categoryColors[event.category] || categoryColors['Other'];
+                    const eventDate = new Date(event.date + 'T00:00:00');
+                    const dateStr = eventDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+
+                    return `
+                        <div onclick='this.closest(".fixed").remove(); viewEvent(${JSON.stringify(event).replace(/'/g, "&#39;")})' class="p-3 rounded-lg border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800 cursor-pointer transition-colors">
+                            <div class="flex items-start gap-3">
+                                <div class="text-center min-w-[72px]">
+                                    <div class="text-xs text-gray-500 dark:text-gray-400">${dateStr.split(' ')[0]}</div>
+                                    <div class="text-lg font-bold text-gray-900 dark:text-gray-100">${dateStr.split(' ')[1]} ${dateStr.split(' ')[2]}</div>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="font-medium text-sm text-gray-900 dark:text-gray-100 truncate">${event.name}</div>
+                                    <div class="text-xs ${colors.text} mt-1">${event.category}</div>
+                                    ${event.time ? `<div class="text-xs text-gray-500 dark:text-gray-400 mt-1">${event.time}</div>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
 }
 
 // Open add event modal - FIXED VERSION

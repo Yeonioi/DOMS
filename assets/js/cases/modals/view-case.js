@@ -4,12 +4,19 @@ async function viewCase(caseId) {
   const caseData = allCases.find((c) => c.id === caseId);
   if (!caseData) return;
 
+  const modalState = window.__casesModalState || (window.__casesModalState = {});
+  const openToken = Symbol(`viewCase:${caseId}`);
+  modalState.viewCase = openToken;
+  document.querySelectorAll('[data-view-case-modal="true"]').forEach(existingModal => existingModal.remove());
+
   // Load applied sanctions for this case
   const sanctions = await loadAppliedSanctionsForView(caseId);
+  if (modalState.viewCase !== openToken) return;
 
   const modal = document.createElement("div");
   modal.className =
     "fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 p-4";
+  modal.setAttribute('data-view-case-modal', 'true');
   modal.innerHTML = `
         <div class="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md p-5 max-h-[90vh] overflow-y-auto">
             <div class="flex items-center justify-between mb-4">
@@ -192,6 +199,7 @@ async function viewCase(caseId) {
             </div>
         </div>
     `;
+  if (modalState.viewCase !== openToken) return;
   document.body.appendChild(modal);
 }
 
@@ -269,6 +277,13 @@ async function markCaseResolved(caseId) {
 }
 
 async function confirmMarkResolved(caseId) {
+  const caseData = allCases.find((c) => c.id === caseId);
+  const blockedReason = getCaseResolutionBlockReason(caseData);
+  if (blockedReason) {
+    showNotification(blockedReason, "error");
+    return;
+  }
+
   // Close confirmation modal
   const modal = document.querySelector(".fixed.inset-0");
   if (modal) modal.remove();

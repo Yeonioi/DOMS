@@ -42,16 +42,25 @@ async function addCase() {
                 </div>
 
                 <div id="newCaseTypeDiv" style="display: none;">
-                    <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1.5">Case Type <span class="text-red-500">*</span></label>
-                    <div class="relative">
-                        <input list="newCaseTypeList" id="newCaseType" required
-                            onchange="handleAddCaseTypeChange()"
-                            class="w-full px-2.5 py-2 text-sm border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100"
-                            placeholder="Type to search or select...">
-                        <datalist id="newCaseTypeList">
-                            <!-- Populated dynamically -->
-                        </datalist>
+                  <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1.5">Case Type <span class="text-red-500">*</span></label>
+                  <div class="flex items-center gap-2">
+                    <div class="flex-1">
+                      <input list="newCaseTypeList" id="newCaseType" required
+                        onchange="handleAddCaseTypeChange()"
+                        class="w-full px-2.5 py-2 text-sm border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100"
+                        placeholder="Type to search or select...">
+                      <datalist id="newCaseTypeList">
+                        <!-- Populated dynamically -->
+                      </datalist>
                     </div>
+                    <button type="button" onclick="clearAddCaseType()"
+                      class="inline-flex h-10 w-10 items-center justify-center rounded border border-gray-300 dark:border-slate-600 text-gray-400 hover:text-gray-600 hover:bg-gray-50 dark:hover:bg-slate-700 dark:hover:text-gray-200 transition-colors"
+                      aria-label="Clear case type">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                      </svg>
+                    </button>
+                  </div>
                     <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Start typing to filter options</p>
                 </div>
 
@@ -265,4 +274,13 @@ function handleAddCaseTypeChange() {
         customOffenseInput.required = false;
     }
 }
+
+    function clearAddCaseType() {
+      const caseTypeInput = document.getElementById('newCaseType');
+      const customOffenseInput = document.getElementById('newCustomOffense');
+
+      caseTypeInput.value = '';
+      customOffenseInput.value = '';
+      handleAddCaseTypeChange();
+    }
 
