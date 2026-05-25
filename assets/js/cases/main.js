@@ -158,7 +158,7 @@ function renderTableRows() {
 
 
     if (casesToDisplay.length === 0) {
-        const colSpan = currentTab === 'archived' ? '7' : '6';
+        const colSpan = currentTab === 'archived' ? '8' : '7';
         tbody.innerHTML = `
             <tr>
                 <td colspan="${colSpan}" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
@@ -171,8 +171,8 @@ function renderTableRows() {
 
     let tableHTML = casesToDisplay.map(caseItem => `
         <tr class="h-[72px] hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors">
-            <td class="px-6 py-4 text-sm font-medium text-gray-900 dark:text-gray-100 w-28"><div class="truncate">${caseItem.id}</div></td>
-            <td class="px-6 py-4 w-48">
+            <td class="px-5 py-4 text-sm font-medium text-gray-900 dark:text-gray-100 w-28"><div class="truncate">${caseItem.id}</div></td>
+            <td class="px-5 py-4 w-48">
                 <div class="flex items-center gap-2">
                     <div class="w-8 h-8 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex-shrink-0 flex items-center justify-center">
                         <span class="text-xs font-bold text-white">${caseItem.student.split(' ').map(n => n[0]).join('').substring(0, 2)}</span>
@@ -180,15 +180,16 @@ function renderTableRows() {
                     <span class="text-sm font-medium text-gray-900 dark:text-gray-100">${caseItem.student}</span>
                 </div>
             </td>
-            <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-300 w-48"><div class="truncate">${caseItem.type}</div></td>
-            <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-300 w-36"><div class="truncate">${caseItem.date}</div></td>
-            <td class="px-6 py-4 w-32">
+            <td class="pl-5 pr-2 py-4 text-sm text-gray-700 dark:text-gray-300 w-48"><div class="truncate">${caseItem.type}</div></td>
+            <td class="pl-2 pr-4 py-4 text-sm text-gray-700 dark:text-gray-300 w-28"><div class="truncate">${caseItem.date}</div></td>
+            <td class="pl-4 pr-4 py-4 text-sm text-gray-700 dark:text-gray-300 w-36"><div class="truncate">${caseItem.assignedTo || 'Unassigned'}</div></td>
+            <td class="pl-4 pr-1 py-4 w-32">
                 <div class="truncate inline-block">
                     <span class="inline-block px-2.5 py-1 text-xs font-medium rounded ${statusColors[caseItem.statusColor]}">${caseItem.status}</span>
                 </div>
             </td>
-            <td class="px-2 py-2 pr-4 whitespace-nowrap w-56">
-                <div class="flex items-center gap-0.5">
+            <td class="pl-0 pr-2 py-2 whitespace-nowrap w-56">
+                <div class="flex items-center gap-0.5 -ml-3">
                     ${currentTab === 'archived' ? `
                         <button onclick="unarchiveCase('${caseItem.id}')"
                             class="px-3 py-1.5 text-base text-[#60A5FA] hover:text-blue-700 transition-colors">
@@ -263,7 +264,7 @@ function renderTableRows() {
     for (let i = 0; i < emptyRowsCount; i++) {
         tableHTML += `
             <tr class="h-[72px] border-b border-gray-100 dark:border-slate-700">
-                <td colspan="6"></td>
+                <td colspan="7"></td>
             </tr>
         `;
     }
@@ -327,16 +328,18 @@ function loadCasesFromDB() {
                     console.log('Loaded cases:', allCases.length, 'Filtered:', filteredCases.length);
                 } catch (renderError) {
                     console.error('Render error:', renderError);
+                    const colSpan = currentTab === 'archived' ? 8 : 7;
                     document.getElementById('casesTableBody').innerHTML = `
-                        <tr><td colspan="7" class="px-6 py-8 text-center text-red-500">
+                        <tr><td colspan="${colSpan}" class="px-6 py-8 text-center text-red-500">
                             Error rendering cases table: ${renderError.message}
                         </td></tr>
                     `;
                 }
             } else {
                 console.error('Failed to load cases:', data.error);
+                const colSpan = currentTab === 'archived' ? 8 : 7;
                 document.getElementById('casesTableBody').innerHTML = `
-                    <tr><td colspan="7" class="px-6 py-8 text-center text-red-500">
+                    <tr><td colspan="${colSpan}" class="px-6 py-8 text-center text-red-500">
                         Error loading cases: ${data.error || 'Unknown error'}
                     </td></tr>
                 `;
@@ -344,8 +347,9 @@ function loadCasesFromDB() {
         } catch (e) {
             console.error('JSON parse error:', e);
             console.error('Response was:', text);
+            const colSpan = currentTab === 'archived' ? 8 : 7;
             document.getElementById('casesTableBody').innerHTML = `
-                <tr><td colspan="7" class="px-6 py-8 text-center text-red-500">
+                <tr><td colspan="${colSpan}" class="px-6 py-8 text-center text-red-500">
                     Error: Invalid response from server. Check console for details.
                 </td></tr>
             `;
@@ -353,8 +357,9 @@ function loadCasesFromDB() {
     })
     .catch(error => {
         console.error('Fetch error:', error);
+        const colSpan = currentTab === 'archived' ? 8 : 7;
         document.getElementById('casesTableBody').innerHTML = `
-            <tr><td colspan="7" class="px-6 py-8 text-center text-red-500">
+            <tr><td colspan="${colSpan}" class="px-6 py-8 text-center text-red-500">
                 Error loading cases: ${error.message}. Please check console.
             </td></tr>
         `;

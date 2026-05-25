@@ -57,6 +57,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
 
         // Format data for JavaScript
         $formattedCases = array_map(function ($case) {
+            $statusColorClass = function ($status) {
+                switch ($status) {
+                    case 'Pending':
+                        return 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-200 dark:border-orange-500/30';
+                    case 'On Going':
+                        return 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-500/30';
+                    case 'Resolved':
+                        return 'bg-green-500/10 text-green-600 dark:text-green-400 border border-green-200 dark:border-green-500/30';
+                    case 'Dismissed':
+                        return 'bg-gray-500/10 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-500/30';
+                    default:
+                        return 'bg-gray-500/10 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-500/30';
+                }
+            };
+
+            $portfolioSanction = fetchOne(
+                "SELECT TOP 1 cs.case_sanction_id, cs.sanction_id, cs.duration_days, cs.duration_extra_hours, cs.deadline,
+                        cs.applied_date, cs.is_completed, s.sanction_name
+                 FROM case_sanctions cs
+                 JOIN sanctions s ON cs.sanction_id = s.sanction_id
+                 WHERE cs.case_id = ?
+                   AND (
+                        LOWER(s.sanction_name) LIKE '%corrective%'
+                        OR LOWER(s.sanction_name) LIKE '%community service%'
+                        OR LOWER(s.sanction_name) LIKE '%suspension from class%'
+                   )
+                 ORDER BY cs.applied_date DESC, cs.case_sanction_id DESC",
+                [$case['case_id']]
+            );
+            $portfolioCompletion = $portfolioSanction ? getCommunityServiceCompletionSnapshot($portfolioSanction['case_sanction_id']) : null;
+
             return [
                 'id' => $case['case_id'],
                 'student' => $case['student_name'],
@@ -65,11 +96,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
                 'date' => formatDate($case['date_reported']),
                 'status' => $case['status'],
                 'assignedTo' => $case['assigned_to_name'] ?? 'Unassigned',
-                'statusColor' => getStatusColor($case['status']),
+                'statusColor' => $statusColorClass($case['status']),
                 'description' => $case['description'] ?? '',
                 'notes' => $case['notes'] ?? '',
                 'severity' => $case['severity'] ?? 'Minor',
-                'isArchived' => $case['is_archived'] == 1
+                'isArchived' => $case['is_archived'] == 1,
+                'portfolioSanctionId' => $portfolioSanction['case_sanction_id'] ?? null,
+                'hasProgressModal' => !empty($portfolioSanction['case_sanction_id']),
+                'checkInCompleted' => !empty($portfolioCompletion['is_complete'])
             ];
         }, $cases);
 
@@ -117,6 +151,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
             [$caseId]
         );
 
+        if ($portfolioSanction) {
+            $completionSnapshot = getCommunityServiceCompletionSnapshot($portfolioSanction['case_sanction_id']);
+            if ($completionSnapshot) {
+                $portfolioSanction['is_completed'] = !empty($completionSnapshot['is_complete']);
+            }
+        }
+
         $submissions = [];
         if ($portfolioSanction) {
             $submissions = fetchAll(
@@ -137,6 +178,153 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
         auditStudentCaseViewed($caseId);
 
         echo json_encode(['success' => true, 'case' => $case]);
+        exit;
+    }
+
+    if ($_POST['action'] === 'getCheckInProgress') {
+        if (!$studentId) {
+            echo json_encode(['success' => false, 'error' => 'Student record not found']);
+            exit;
+        }
+
+        $caseId = trim($_POST['caseId'] ?? '');
+        $caseSanctionId = intval($_POST['caseSanctionId'] ?? 0);
+
+        if ($caseId === '' || $caseSanctionId <= 0) {
+            echo json_encode(['success' => false, 'error' => 'Invalid request']);
+            exit;
+        }
+
+        $ownedCase = fetchOne(
+            "SELECT c.case_id, CONCAT(s.first_name, ' ', s.last_name) AS student_name
+             FROM cases c
+             JOIN students s ON s.student_id = c.student_id
+             WHERE c.case_id = ? AND c.student_id = ?",
+            [$caseId, $studentId]
+        );
+
+        if (!$ownedCase) {
+            echo json_encode(['success' => false, 'error' => 'Case not found']);
+            exit;
+        }
+
+        $sanction = fetchOne(
+            "SELECT cs.case_sanction_id, cs.duration_days, cs.duration_extra_hours, cs.deadline, cs.applied_date, s.sanction_name
+             FROM case_sanctions cs
+             JOIN sanctions s ON s.sanction_id = cs.sanction_id
+             WHERE cs.case_sanction_id = ?
+               AND cs.case_id = ?
+               AND (
+                    LOWER(s.sanction_name) LIKE '%corrective%'
+                    OR LOWER(s.sanction_name) LIKE '%community service%'
+                    OR LOWER(s.sanction_name) LIKE '%suspension from class%'
+               )",
+            [$caseSanctionId, $caseId]
+        );
+
+        if (!$sanction) {
+            echo json_encode(['success' => false, 'error' => 'Check-in progress not available for this case']);
+            exit;
+        }
+
+        $snapshot = getCommunityServiceCompletionSnapshot($caseSanctionId);
+        if ($snapshot) {
+            $sanction['is_completed'] = !empty($snapshot['is_complete']);
+            $sanction['completed_hours'] = floatval($snapshot['completed_hours'] ?? 0);
+            $sanction['completed_days'] = intval($snapshot['completed_days'] ?? 0);
+        }
+
+        $inferDurationDays = function ($durationValue, $sanctionName) {
+            $stored = intval($durationValue);
+            if ($stored > 0) {
+                return $stored;
+            }
+
+            $name = strtolower((string)$sanctionName);
+
+            if (preg_match('/(\d+)\s*-\s*(\d+)\s*days?/i', $name, $rangeMatch)) {
+                $minDays = intval($rangeMatch[1]);
+                if ($minDays > 0) {
+                    return $minDays;
+                }
+            }
+
+            if (preg_match('/(\d+)\s*days?/i', $name, $singleMatch)) {
+                $explicitDays = intval($singleMatch[1]);
+                if ($explicitDays > 0) {
+                    return $explicitDays;
+                }
+            }
+
+            if (strpos($name, 'corrective reinforcement') !== false || strpos($name, 'suspension from class') !== false) {
+                return 3;
+            }
+
+            return 0;
+        };
+
+        $totalDays = $inferDurationDays($sanction['duration_days'] ?? null, $sanction['sanction_name'] ?? '');
+        $extraHours = max(0, intval($sanction['duration_extra_hours'] ?? 0));
+        $totalHours = max(0, $totalDays > 0 ? ($extraHours > 0 ? (($totalDays - 1) * 8) + $extraHours : ($totalDays * 8)) : 0);
+        $isSuspension = strpos(strtolower((string)($sanction['sanction_name'] ?? '')), 'suspension from class') !== false;
+
+        $checkInSql = "WITH ranked AS (
+                           SELECT *, ROW_NUMBER() OVER (
+                               PARTITION BY day_number
+                               ORDER BY COALESCE(updated_at, created_at) DESC, checkin_id DESC
+                           ) AS rn
+                           FROM case_checkins
+                           WHERE case_sanction_id = ?
+                       )
+                       SELECT *
+                       FROM ranked
+                       WHERE rn = 1
+                       ORDER BY day_number ASC";
+        $checkIns = fetchAll($checkInSql, [$caseSanctionId]);
+
+        $days = [];
+        $maxRecordedDay = 0;
+        foreach ($checkIns as $checkInRow) {
+            $dayNumber = intval($checkInRow['day_number'] ?? 0);
+            if ($dayNumber > $maxRecordedDay) {
+                $maxRecordedDay = $dayNumber;
+            }
+            $days[] = [
+                'day' => $dayNumber,
+                'check_in_time' => $checkInRow['check_in_time'] ?? null,
+                'check_out_time' => $checkInRow['check_out_time'] ?? null
+            ];
+        }
+
+        $displayTotalDays = max(1, $maxRecordedDay);
+        if ($maxRecordedDay === 0) {
+            $displayTotalDays = 1;
+        }
+
+        $progressPercent = $isSuspension
+            ? ($totalDays > 0 ? min(100, round(((int)($sanction['completed_days'] ?? 0) / $totalDays) * 100)) : 0)
+            : ($totalHours > 0 ? min(100, round(((float)($sanction['completed_hours'] ?? 0) / $totalHours) * 100)) : 0);
+
+        echo json_encode([
+            'success' => true,
+            'progress' => [
+                'case_id' => $caseId,
+                'case_sanction_id' => $caseSanctionId,
+                'student_name' => $ownedCase['student_name'],
+                'sanction_name' => $sanction['sanction_name'],
+                'deadline' => $sanction['deadline'] ?? null,
+                'applied_date' => $sanction['applied_date'] ?? null,
+                'is_suspension' => $isSuspension,
+                'total_days' => $totalDays,
+                'total_hours' => $totalHours,
+                'completed_days' => intval($sanction['completed_days'] ?? 0),
+                'completed_hours' => floatval($sanction['completed_hours'] ?? 0),
+                'progress_percent' => $progressPercent,
+                'days' => $days,
+                'display_total_days' => $displayTotalDays,
+                'is_completed' => !empty($sanction['is_completed'])
+            ]
+        ]);
         exit;
     }
 
@@ -168,7 +356,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
             exit;
         }
 
-        $sanction = fetchOne(
+                $sanction = fetchOne(
             "SELECT cs.case_sanction_id, s.sanction_name, cs.is_completed
              FROM case_sanctions cs
              JOIN sanctions s ON s.sanction_id = cs.sanction_id
@@ -181,6 +369,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
                )",
             [$caseSanctionId, $caseId]
         );
+
+        if ($sanction) {
+            $completionSnapshot = getCommunityServiceCompletionSnapshot($sanction['case_sanction_id']);
+            if ($completionSnapshot) {
+                $sanction['is_completed'] = !empty($completionSnapshot['is_complete']);
+            }
+        }
 
         if (!$sanction) {
             echo json_encode(['success' => false, 'error' => 'Portfolio-enabled sanction not found for this case']);
@@ -345,7 +540,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
                                     <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase w-28">Severity</th>
                                     <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase w-32">Status</th>
                                     <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase w-48">Assigned To</th>
-                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase w-36">Action</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase w-56">Action</th>
                                 </tr>
                             </thead>
                             <tbody id="casesTableBody" class="divide-y divide-gray-200 dark:divide-slate-700">
@@ -476,24 +671,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
                     <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400 w-48"><div class="truncate">${escapeHtml(caseItem.type)}</div></td>
                     <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400 w-36"><div class="truncate">${escapeHtml(caseItem.date)}</div></td>
                     <td class="px-6 py-4 text-sm w-28">
-                        <div class="truncate inline-block">
-                            <span class="px-2 py-1 rounded-full text-xs font-semibold ${getSeverityClass(caseItem.severity)}">
+                        <div class="inline-flex align-middle">
+                            <span class="px-2 py-1 rounded-full text-xs font-semibold leading-none whitespace-nowrap ${getSeverityClass(caseItem.severity)}">
                                 ${escapeHtml(caseItem.severity)}
                             </span>
                         </div>
                     </td>
                     <td class="px-6 py-4 text-sm w-32">
-                        <div class="truncate inline-block">
-                            <span class="px-2 py-1 rounded-full text-xs font-semibold ${caseItem.statusColor}">
+                        <div class="inline-flex align-middle">
+                            <span class="px-2 py-1 rounded-full text-xs font-semibold leading-none whitespace-nowrap ${caseItem.statusColor}">
                                 ${escapeHtml(caseItem.status)}
                             </span>
                         </div>
                     </td>
                     <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400 w-48"><div class="truncate">${escapeHtml(caseItem.assignedTo)}</div></td>
-                    <td class="px-6 py-4 text-sm w-36">
-                        <button onclick="viewCaseDetails('${escapeHtml(caseItem.id)}')" class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium transition-colors">
-                            View
-                        </button>
+                    <td class="px-6 py-4 text-sm w-56">
+                        <div class="flex items-center gap-1.5 whitespace-nowrap flex-nowrap">
+                            <button onclick="viewCaseDetails('${escapeHtml(caseItem.id)}')" class="inline-flex items-center text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium transition-colors whitespace-nowrap">
+                                View Details
+                            </button>
+                            ${caseItem.hasProgressModal ? '<span class="text-gray-400 dark:text-gray-500 text-sm font-medium select-none">|</span>' : ''}
+                            ${caseItem.hasProgressModal ? `
+                                <button type="button" onclick="openCheckInProgressModal('${escapeHtml(caseItem.id)}', '${escapeHtml(caseItem.portfolioSanctionId)}')" data-case-checkin-icon="true" data-case-checkin-type="corrective" data-case-id="${escapeHtml(caseItem.id)}" class="inline-flex items-center ${caseItem.checkInCompleted ? 'text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300' : 'text-orange-600 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-300'} font-medium transition-colors whitespace-nowrap" title="Check-In Progress" aria-label="Check-In Progress">
+                                    Check-In Progress
+                                </button>
+                            ` : ''}
+                        </div>
                     </td>
                 </tr>
             `).join('');
@@ -603,7 +806,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
                                             <label class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Portfolio / Completion Report</label>
                                             <p class="text-sm text-gray-600 dark:text-gray-300 mt-1">Submit documented accomplishments, reflections, and lessons learned.</p>
                                         </div>
-                                        <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30">Required</span>
+                                        <div class="flex flex-col items-end gap-2">
+                                            <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30">Required</span>
+                                        </div>
                                     </div>
 
                                     <div class="grid grid-cols-1 gap-3">
@@ -801,6 +1006,207 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
                     showNotification('Upload failed due to a network error.', 'error');
                 }
             }
+        }
+
+        async function openCheckInProgressModal(caseId, caseSanctionId) {
+            document.querySelectorAll('[data-checkin-progress-modal="true"]').forEach((el) => el.remove());
+
+            const overlay = document.createElement('div');
+            overlay.className = 'fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-[70] p-4';
+            overlay.setAttribute('data-checkin-progress-modal', 'true');
+            overlay.innerHTML = `
+                <div class="bg-white dark:bg-[#111827] rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-slate-700">
+                    <div class="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 flex items-center justify-between border-b border-blue-800 dark:border-blue-900">
+                        <div>
+                            <h2 class="text-xl font-bold text-white">Check-In Progress</h2>
+                        </div>
+                        <button type="button" class="text-white hover:bg-blue-800 rounded p-1 transition-colors" onclick="closeCheckInProgressModal()">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div class="p-6" data-checkin-progress-content>
+                        <div class="flex items-center justify-center py-10">
+                            <div class="animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            overlay.addEventListener('click', (event) => {
+                if (event.target === overlay) {
+                    overlay.remove();
+                }
+            });
+
+            document.body.appendChild(overlay);
+
+            try {
+                const formData = new FormData();
+                formData.append('ajax', '1');
+                formData.append('action', 'getCheckInProgress');
+                formData.append('caseId', caseId);
+                formData.append('caseSanctionId', caseSanctionId);
+
+                const response = await fetch(window.location.href, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                const content = overlay.querySelector('[data-checkin-progress-content]');
+
+                if (!data.success || !data.progress) {
+                    content.innerHTML = `<p class="text-red-600 dark:text-red-400">${escapeHtml(data.error || 'Unable to load check-in progress')}</p>`;
+                    return;
+                }
+
+                renderCheckInProgressModal(content, data.progress);
+            } catch (error) {
+                console.error('Error loading check-in progress:', error);
+                const content = overlay.querySelector('[data-checkin-progress-content]');
+                if (content) {
+                    content.innerHTML = '<p class="text-red-600 dark:text-red-400">Error loading check-in progress</p>';
+                }
+            }
+        }
+
+        function closeCheckInProgressModal() {
+            document.querySelectorAll('[data-checkin-progress-modal="true"]').forEach((el) => el.remove());
+        }
+
+        function renderCheckInProgressModal(container, progress) {
+            const isSuspension = !!progress.is_suspension;
+            const totalValue = isSuspension ? Number(progress.total_days || 0) : Number(progress.total_hours || 0);
+            const completedValue = isSuspension ? Number(progress.completed_days || 0) : Number(progress.completed_hours || 0);
+            const progressPercent = Number(progress.progress_percent || 0);
+            const dayCards = Array.isArray(progress.days) ? progress.days : [];
+            const displayDays = Math.max(1, Number(progress.display_total_days || dayCards.length || 1));
+            const dayMap = new Map(dayCards.map((item) => [Number(item.day), item]));
+
+            const dayCardsHtml = Array.from({ length: displayDays }, (_, index) => {
+                const dayNumber = index + 1;
+                const dayData = dayMap.get(dayNumber) || {};
+                const hasCheckIn = !!dayData.check_in_time;
+                const hasCheckOut = !!dayData.check_out_time;
+
+                if (hasCheckIn && hasCheckOut) {
+                    return `
+                        <div class="flex items-center gap-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                            <div class="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
+                                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                                </svg>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-medium text-gray-900 dark:text-gray-100">Day ${dayNumber}</p>
+                                <div class="flex items-center gap-2 mt-0.5">
+                                    <span class="text-xs text-gray-500 dark:text-gray-400"><span class="font-medium text-green-600 dark:text-green-400">In:</span> ${escapeHtml(formatTimeOnly(dayData.check_in_time))}</span>
+                                    <span class="text-xs text-gray-300 dark:text-gray-600">|</span>
+                                    <span class="text-xs text-gray-500 dark:text-gray-400"><span class="font-medium text-green-600 dark:text-green-400">Out:</span> ${escapeHtml(formatTimeOnly(dayData.check_out_time))}</span>
+                                </div>
+                            </div>
+                            <span class="text-xs font-semibold text-green-600 dark:text-green-400 flex-shrink-0">Completed</span>
+                        </div>
+                    `;
+                }
+
+                if (hasCheckIn) {
+                    return `
+                        <div class="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-2 border-blue-400 dark:border-blue-500">
+                            <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
+                                <span class="text-white text-xs font-bold">${dayNumber}</span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-medium text-gray-900 dark:text-gray-100">Day ${dayNumber}</p>
+                                <div class="flex items-center gap-2 mt-0.5">
+                                    <span class="text-xs text-gray-500 dark:text-gray-400"><span class="font-medium text-blue-500">In:</span> ${escapeHtml(formatTimeOnly(dayData.check_in_time))}</span>
+                                    <span class="text-xs text-gray-300 dark:text-gray-600">|</span>
+                                    <span class="text-xs text-gray-500 dark:text-gray-400"><span class="font-medium text-blue-500">Out:</span> <span class="italic text-gray-400 dark:text-gray-500">In progress</span></span>
+                                </div>
+                            </div>
+                            <span class="text-xs font-semibold text-blue-600 dark:text-blue-400 flex-shrink-0">In progress</span>
+                        </div>
+                    `;
+                }
+
+                return `
+                    <div class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-slate-700/40 rounded-lg border border-gray-200 dark:border-slate-600 opacity-60">
+                        <div class="w-8 h-8 bg-gray-300 dark:bg-slate-600 rounded-full flex items-center justify-center flex-shrink-0">
+                            <span class="text-gray-500 dark:text-gray-400 text-xs font-bold">${dayNumber}</span>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Day ${dayNumber}</p>
+                            <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Upcoming</p>
+                        </div>
+                        <span class="text-xs text-gray-400 dark:text-gray-500 flex-shrink-0">—</span>
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = `
+                <div class="space-y-4">
+                    <div class="bg-gray-50 dark:bg-slate-700/60 rounded-lg p-4">
+                        <div class="flex items-center justify-between gap-3">
+                            <div>
+                                <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Case</p>
+                                <p class="text-lg font-semibold text-gray-900 dark:text-gray-100">${escapeHtml(progress.case_id)}</p>
+                                <p class="text-sm text-gray-600 dark:text-gray-300 mt-1">${escapeHtml(progress.sanction_name || 'Community Service')}</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-2xl font-bold text-gray-900 dark:text-gray-100">${escapeHtml(formatProgressValue(totalValue, isSuspension))}</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">${isSuspension ? 'days total' : 'hours total'}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="flex items-center justify-between mb-1.5">
+                            <span class="text-xs font-medium text-gray-700 dark:text-gray-300">Progress</span>
+                            <span class="text-xs font-bold text-gray-900 dark:text-gray-100">${escapeHtml(formatProgressValue(completedValue, isSuspension))} / ${escapeHtml(formatProgressValue(totalValue, isSuspension))} ${isSuspension ? 'days completed' : 'hours completed'}</span>
+                        </div>
+                        <div class="w-full bg-gray-200 dark:bg-slate-600 rounded-full h-2.5">
+                            <div class="bg-blue-600 h-2.5 rounded-full" style="width: ${progressPercent}%"></div>
+                        </div>
+                        <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">${progressPercent}% done</p>
+                    </div>
+
+                    ${progress.deadline ? `
+                        <div class="rounded-lg border border-gray-200 dark:border-slate-700 p-3 text-sm text-gray-700 dark:text-gray-300">
+                            <span class="font-semibold text-gray-900 dark:text-gray-100">Deadline:</span> ${escapeHtml(formatDisplayDate(progress.deadline))}
+                        </div>
+                    ` : ''}
+
+                    <div class="space-y-2 max-h-[48vh] overflow-y-auto pr-1">
+                        ${dayCardsHtml}
+                    </div>
+                </div>
+            `;
+        }
+
+        function formatTimeOnly(dateTimeValue) {
+            if (!dateTimeValue) return 'Not recorded yet';
+
+            const date = new Date(dateTimeValue);
+            if (Number.isNaN(date.getTime())) {
+                return 'Not recorded yet';
+            }
+
+            return date.toLocaleTimeString('en-US', {
+                hour: 'numeric',
+                minute: '2-digit'
+            });
+        }
+
+        function formatProgressValue(value, isSuspension) {
+            if (isSuspension) {
+                return `${Number(value || 0)}`;
+            }
+
+            const numericValue = Number(value || 0);
+            return numericValue % 1 === 0 ? numericValue.toFixed(0) : numericValue.toFixed(2);
         }
 
         function escapeHtml(text) {

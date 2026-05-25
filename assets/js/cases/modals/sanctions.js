@@ -3,8 +3,14 @@
 async function manageSanctions(caseId) {
     const caseData = allCases.find(c => c.id === caseId);
     if (!caseData) return;
+
+    const modalState = window.__casesModalState || (window.__casesModalState = {});
+    const openToken = Symbol(`manageSanctions:${caseId}`);
+    modalState.manageSanctions = openToken;
+    document.querySelectorAll('[data-manage-sanctions-modal="true"]').forEach(existingModal => existingModal.remove());
     
     const sanctions = await loadSanctions();
+    if (modalState.manageSanctions !== openToken) return;
     
     // Fetch student data for offense history
     let studentOffenseData = null;
@@ -30,6 +36,7 @@ async function manageSanctions(caseId) {
     } catch (error) {
         console.error('Error fetching student data:', error);
     }
+    if (modalState.manageSanctions !== openToken) return;
     
     // Fetch recommended sanction based on escalation algorithm
     let recommendationHTML = '';
@@ -97,9 +104,11 @@ async function manageSanctions(caseId) {
                             <p class="text-xs ${textColor} mb-2">
                                 <strong>Suggested:</strong> ${recommendationData.sanction_name}
                                 ${recommendationData.duration_range && !recommendationData.sanction_name.toLowerCase().includes(recommendationData.duration_range.toLowerCase()) ? `<br><span class="opacity-80">${recommendationData.duration_range}</span>` : ''}
+                        if (modalState.manageSanctions !== openToken) return;
                             </p>
                             <p class="text-xs ${textColor} opacity-90 mb-2">
                                 ${recommendationData.reason.replace(/(first|second|third|fourth|1st|2nd|3rd|4th)/gi, `<span class="font-bold px-1 py-0.5 rounded ${isHighSeverity ? 'bg-red-200 dark:bg-red-700 text-red-900 dark:text-red-100' : 'bg-blue-200 dark:bg-blue-700 text-blue-900 dark:text-blue-100'}">$1</span>`)}
+                        modal.setAttribute('data-manage-sanctions-modal', 'true');
                                 ${recommendationData.subcategory ? `<br><span class="opacity-75">Category ${recommendationData.subcategory}</span>` : ''}
                             </p>
                             ${recommendationData.requires_ched_approval ? `
@@ -279,6 +288,8 @@ async function manageSanctions(caseId) {
             </div>
         </div>
     `;
+
+    if (modalState.manageSanctions !== openToken) return;
     document.body.appendChild(modal);
 
     loadAppliedSanctions(caseId);

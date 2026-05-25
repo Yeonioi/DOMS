@@ -318,26 +318,21 @@ $adminName = getFormattedUserName();
                     <div class="lg:col-span-3">
                         <!-- Calendar Header -->
                         <div class="bg-white dark:bg-[#111827] rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 p-6 mb-6">
-                            <div class="flex items-center justify-between mb-4">
-                                <div class="flex items-center gap-4">
-                                    <button onclick="previousMonth()" class="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
+                            <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                                <div class="flex flex-wrap items-center gap-3 md:gap-4">
+                                    <button onclick="previousMonth()" class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 text-gray-600 transition-colors hover:bg-gray-100 dark:border-slate-700 dark:text-gray-300 dark:hover:bg-slate-700">
                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
                                         </svg>
                                     </button>
-                                    <h2 id="currentMonth" class="text-xl font-semibold text-gray-800 dark:text-gray-100"></h2>
-                                    <button onclick="nextMonth()" class="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
+                                    <h2 id="currentMonth" class="text-xl font-semibold text-gray-800 dark:text-gray-100 tracking-tight"></h2>
+                                    <button onclick="nextMonth()" class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 text-gray-600 transition-colors hover:bg-gray-100 dark:border-slate-700 dark:text-gray-300 dark:hover:bg-slate-700">
                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                                         </svg>
                                     </button>
-                                    <button onclick="goToToday()" class="ml-2 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                                    <button onclick="goToToday()" class="inline-flex h-10 items-center rounded-lg bg-blue-600 px-4 text-sm font-medium text-white transition-colors hover:bg-blue-700">
                                         Today
-                                    </button>
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <button id="monthBtn" onclick="switchView('month')" class="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg">
-                                        Month
                                     </button>
                                 </div>
                             </div>
@@ -388,16 +383,11 @@ $adminName = getFormattedUserName();
                         <div class="bg-white dark:bg-[#111827] rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 p-6">
                             <div class="flex items-center justify-between mb-4">
                                 <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100">Upcoming Events</h3>
-                                <button onclick="loadEvents()" class="text-blue-600 hover:text-blue-700 dark:text-blue-400">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                                    </svg>
-                                </button>
                             </div>
                             <div id="upcomingEventsList" class="space-y-3">
                                 <p class="text-sm text-gray-500 dark:text-gray-400">Loading events...</p>
                             </div>
-                            <button onclick="loadEvents()" class="w-full mt-4 text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 font-medium">
+                            <button onclick="openUpcomingEventsModal()" class="w-full mt-4 text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 font-medium">
                                 View All
                             </button>
                         </div>
