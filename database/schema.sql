@@ -231,6 +231,33 @@ CREATE TABLE lost_found_items (
 GO
 
 -- ============================================
+-- 8.1 LOST_FOUND_CATEGORIES TABLE
+-- ============================================
+CREATE TABLE lost_found_categories (
+    category_id INT IDENTITY(1,1) PRIMARY KEY,
+    category_name NVARCHAR(100) NOT NULL UNIQUE,
+    description NVARCHAR(500),
+    is_active BIT DEFAULT 1,
+    created_at DATETIME DEFAULT GETDATE(),
+    updated_at DATETIME DEFAULT GETDATE()
+);
+GO
+
+-- Insert default categories
+INSERT INTO lost_found_categories (category_name, description) VALUES
+('Electronics', 'Electronic devices, gadgets, and accessories'),
+('Books', 'Textbooks, notebooks, and reading materials'),
+('Accessories', 'Bags, belts, scarves, and other accessories'),
+('Clothing', 'Uniforms, jackets, shoes, and apparel'),
+('ID/Documents', 'School IDs, documents, and important papers'),
+('Keys', 'House keys, locker keys, and car keys'),
+('Sports Equipment', 'Sports gear, balls, and athletic equipment'),
+('Personal Items', 'Wallets, phones, and personal belongings'),
+('School Supplies', 'Pens, folders, pencils, and stationery'),
+('Others', 'Miscellaneous items');
+GO
+
+-- ============================================
 -- 9. NOTIFICATIONS TABLE
 -- ============================================
 CREATE TABLE notifications (

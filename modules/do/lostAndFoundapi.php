@@ -153,6 +153,14 @@ try {
             }
             break;
             
+        case 'add_category':
+            $categoryName = $_POST['category_name'] ?? '';
+            $description = $_POST['description'] ?? null;
+            
+            $result = addCategory($categoryName, $description);
+            echo json_encode($result);
+            break;
+            
         default:
             echo json_encode(['success' => false, 'message' => 'Invalid action']);
     }

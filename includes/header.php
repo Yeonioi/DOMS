@@ -215,8 +215,12 @@ if (!isset($adminName) || empty($adminName)) {
                     setTimeout(() => {
                         // Check if it's a password reset notification
                         if (relatedId.startsWith('password_reset:')) {
-                            // Navigate to admin users page for password reset requests
-                            window.location.href = `/PrototypeDO/modules/super-admin/adminUsers.php`;
+                            // Extract user_id from related_id (format: 'password_reset:user_id')
+                            const userIdParts = relatedId.split(':');
+                            const userId = userIdParts.length > 1 ? userIdParts[1] : null;
+                            // Navigate to admin users page and open reset password modal
+                            const url = userId ? `/PrototypeDO/modules/super-admin/adminUsers.php?resetUser=${encodeURIComponent(userId)}` : `/PrototypeDO/modules/super-admin/adminUsers.php`;
+                            window.location.href = url;
                         } else if (isPortfolioNotification) {
                             window.location.href = `/PrototypeDO/modules/do/cases.php?caseId=${encodeURIComponent(relatedCaseId)}&openCheckIn=1&sanctionType=${encodeURIComponent(relatedSanctionType)}`;
                         } else if (userRole === 'student') {

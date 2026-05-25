@@ -7,10 +7,9 @@ let itemsPerPage = 7;
 
 // ====== Initialization ======
 document.addEventListener('DOMContentLoaded', function () {
-    console.log('Admin Users page loaded');
     loadUsers();
     setupEventDelegation();
-});
+})
 
 // Setup event delegation for action buttons
 function setupEventDelegation() {
@@ -22,8 +21,6 @@ function setupEventDelegation() {
         
         const action = button.getAttribute('data-action');
         const userId = parseInt(button.getAttribute('data-user-id'));
-        
-        console.log('Button clicked:', action, userId);
         
         switch(action) {
             case 'edit':
@@ -45,8 +42,6 @@ function setupEventDelegation() {
 
 // ====== Load Users from Database ======
 async function loadUsers() {
-    console.log('Loading users from database...');
-    
     currentPage = 1;
     selectedUserIds.clear();
     updateBulkActionBar();
@@ -73,10 +68,28 @@ async function loadUsers() {
         if (data.success) {
             allUsers = data.users;
             filteredUsers = [...allUsers];
-            console.log('Loaded users:', allUsers.length);
-            console.log('User IDs:', allUsers.map(u => u.user_id));
             renderUsers();
             loadStats();
+            
+            // Check if we should open reset password modal for a specific user
+            const urlParams = new URLSearchParams(window.location.search);
+            const resetUserId = urlParams.get('resetUser');
+            
+            if (resetUserId) {
+                const userIdInt = parseInt(resetUserId);
+                const foundUser = allUsers.find(u => u.user_id == userIdInt);
+                
+                if (foundUser) {
+                    // Ensure modals are created
+                    const modal = document.getElementById('resetPasswordModal');
+                    if (!modal) {
+                        createResetPasswordModal();
+                    }
+                    resetPassword(userIdInt);
+                    // Remove the parameter from URL to avoid re-opening on reload
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                }
+            }
         } else {
             console.error('Failed to load users:', data.error);
             showMessage('Error loading users: ' + (data.error || 'Unknown error'), 'error');
@@ -89,7 +102,6 @@ async function loadUsers() {
 
 // ====== Filter Users ======
 function filterUsers() {
-    console.log('Filtering users...');
     loadUsers();
 }
 
@@ -104,8 +116,6 @@ function changeItemsPerPage(value) {
 
 // ====== Render Users Table ======
 function renderUsers() {
-    console.log('Rendering users...');
-    
     const tableBody = document.getElementById('usersTableBody');
     const getStatusToggleIcon = (isActive) => isActive
         ? `
@@ -150,13 +160,12 @@ function renderUsers() {
             const isActive = Number(user.is_active) === 1;
             const statusText = isActive ? 'Active' : 'Inactive';
             return `
-        <tr class="group h-[72px] hover:bg-gray-50 dark:hover:bg-slate-700/50 border-b border-gray-100 dark:border-slate-700 border-l-4 transition-colors ${selectedUserIds.has(user.user_id) ? 'bg-blue-50 dark:bg-slate-800 border-l-blue-600' : 'border-l-transparent'}">
+        <tr class="group h-[72px] overflow-hidden hover:bg-gray-50 dark:hover:bg-slate-700/50 border-b border-gray-100 dark:border-slate-700 border-l-4 transition-colors ${selectedUserIds.has(user.user_id) ? 'bg-blue-50 dark:bg-slate-800 border-l-blue-600' : 'border-l-transparent'}">
             <td class="px-6 py-4">
                 <div>
                     <p class="font-semibold text-gray-900 dark:text-gray-100">${escapeHtml(user.full_name)}</p>
-                    <p class="text-sm text-gray-500 dark:text-gray-400">
-                        ${escapeHtml(user.email)}
-                        ${user.role === 'student' && user.student_id ? '<br><span class="text-xs text-gray-400 dark:text-gray-500">Student ID: ' + escapeHtml(user.student_id) + '</span>' : '<br><span class="text-xs opacity-0">-</span>'}
+                    <p class="text-xs text-gray-400 dark:text-gray-500">
+                        ${user.role === 'student' && user.student_id ? 'Student ID: ' + escapeHtml(user.student_id) : ''}
                     </p>
                 </div>
             </td>
@@ -354,25 +363,35 @@ function editUser(userId) {
 }
 
 function resetPassword(userId) {
-    console.log('resetPassword called:', userId, 'allUsers:', allUsers.length);
     const user = allUsers.find(u => u.user_id == userId);
     if (!user) {
-        console.error('User not found:', userId);
         return;
     }
-    console.log('Found user:', user);
 
-    const modal = document.getElementById('resetPasswordModal');
+    // Ensure modal exists
+    let modal = document.getElementById('resetPasswordModal');
     if (!modal) {
-        console.log('Creating resetPasswordModal...');
         createResetPasswordModal();
+        modal = document.getElementById('resetPasswordModal');
+    }
+    
+    if (!modal) {
+        return;
     }
 
     try {
-        document.getElementById('reset_user_id').value = user.user_id;
-        document.getElementById('reset_username').textContent = user.email;
-        document.getElementById('resetPasswordModal').classList.remove('hidden');
-        console.log('Modal opened');
+        const resetUserIdEl = document.getElementById('reset_user_id');
+        const resetUsernameEl = document.getElementById('reset_username');
+        
+        if (!resetUserIdEl || !resetUsernameEl) {
+            return;
+        }
+        
+        resetUserIdEl.value = user.user_id;
+        resetUsernameEl.textContent = user.email;
+        
+        // Show modal
+        modal.classList.remove('hidden');
     } catch(e) {
         console.error('Error in resetPassword:', e);
     }
@@ -454,8 +473,7 @@ async function loadStats() {
 
         const data = await response.json();
         if (data.success) {
-            // You can display stats here if needed
-            console.log('Stats loaded:', data.stats);
+            // Stats loaded successfully
         }
     } catch (error) {
         console.error('Error loading stats:', error);
