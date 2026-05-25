@@ -3747,7 +3747,7 @@ function initializeEditIcons() {
   // Only initialize for super admin
   if (!<?php echo ($isSuperAdmin ? 'true' : 'false'); ?>) return;
   
-  // Add edit icons to section headers on page load
+  // Add edit icons and buttons to section headers on page load
   const editableSections = document.querySelectorAll('.editable-handbook-section');
   console.log('Editable sections found:', editableSections.length);
   
@@ -3760,34 +3760,58 @@ function initializeEditIcons() {
       return;
     }
     
-    // Check if icon already exists
-    if (heading.querySelector('[data-edit-icon]')) return;
+    // Check if header already processed
+    if (heading.parentElement.classList.contains('handbook-header-wrapper')) return;
     
-    // Add edit icon button to heading
-    const editBtn = document.createElement('button');
-    editBtn.setAttribute('data-edit-icon', 'true');
-    editBtn.className = 'ml-2 p-1 inline-flex items-center justify-center text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition cursor-pointer';
-    editBtn.type = 'button';
-    editBtn.style.background = 'transparent';
-    editBtn.style.border = 'none';
-    editBtn.style.padding = '4px 8px';
-    editBtn.style.cursor = 'pointer';
-    editBtn.style.display = 'inline-flex';
-    editBtn.style.alignItems = 'center';
-    editBtn.style.justifyContent = 'center';
+    // Create header wrapper with title and buttons
+    const headerWrapper = document.createElement('div');
+    headerWrapper.className = 'handbook-header-wrapper flex items-center justify-between';
     
-    editBtn.onclick = (e) => {
+    const titleWrapper = document.createElement('div');
+    titleWrapper.className = 'flex items-center';
+    
+    // Clone heading and add to title wrapper
+    const headingClone = heading.cloneNode(true);
+    titleWrapper.appendChild(headingClone);
+    
+    // Create icon container
+    const iconContainer = document.createElement('span');
+    iconContainer.className = 'ml-2 cursor-pointer text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition';
+    iconContainer.id = `icon-${sectionId}`;
+    
+    const icon = createPencilIcon();
+    iconContainer.appendChild(icon);
+    iconContainer.onclick = (e) => {
       e.preventDefault();
       e.stopPropagation();
       startEditingSection(sectionId);
     };
-    editBtn.title = 'Edit section';
+    titleWrapper.appendChild(iconContainer);
     
-    // Append SVG icon
-    const icon = createPencilIcon();
-    editBtn.appendChild(icon);
-    heading.appendChild(editBtn);
-    console.log('Added edit icon to section:', sectionId);
+    // Create buttons container (initially hidden)
+    const buttonsContainer = document.createElement('div');
+    buttonsContainer.className = 'edit-buttons-container flex items-center gap-2 mt-3';
+    buttonsContainer.id = `buttons-${sectionId}`;
+    buttonsContainer.style.display = 'none';
+    
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'bg-gray-600 hover:bg-gray-700 text-white font-medium px-3 py-1 rounded-lg shadow transition';
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.onclick = () => cancelEditSection(sectionId);
+    
+    const saveBtn = document.createElement('button');
+    saveBtn.className = 'bg-green-600 hover:bg-green-700 text-white font-medium px-3 py-1 rounded-lg shadow transition';
+    saveBtn.textContent = 'Save';
+    saveBtn.onclick = () => saveSectionEdit(sectionId);
+    
+    buttonsContainer.appendChild(cancelBtn);
+    buttonsContainer.appendChild(saveBtn);
+    
+    headerWrapper.appendChild(titleWrapper);
+    headerWrapper.appendChild(buttonsContainer);
+    
+    heading.replaceWith(headerWrapper);
+    console.log('Added header wrapper to section:', sectionId);
   });
 }
 
@@ -3811,7 +3835,7 @@ function startEditingSection(sectionId) {
   const editorId = 'editor-' + sectionId;
   const editorWrapper = document.createElement('div');
   editorWrapper.id = editorId;
-  editorWrapper.className = 'ql-editor-wrapper mb-4 p-4 border border-blue-300 rounded-lg bg-gray-50 dark:bg-slate-700';
+  editorWrapper.className = 'ql-editor-wrapper mb-8 p-4 border border-blue-300 rounded-lg bg-gray-50 dark:bg-slate-700';
   
   // Move content into editor
   editorWrapper.innerHTML = contentDiv.innerHTML;
@@ -3836,29 +3860,20 @@ function startEditingSection(sectionId) {
   
   quillEditors[sectionId] = quill;
   
-  // Disable the edit button while editing
-  const editBtn = section.querySelector('[data-edit-icon]');
-  if (editBtn) {
-    editBtn.disabled = true;
-    editBtn.style.opacity = '0.5';
-  }
+  // Hide icon and show buttons
+  const iconContainer = document.getElementById(`icon-${sectionId}`);
+  const buttonsContainer = document.getElementById(`buttons-${sectionId}`);
+  const headerWrapper = section.querySelector('.handbook-header-wrapper');
   
-  // Add Save/Cancel buttons for this section
-  const buttonContainer = document.createElement('div');
-  buttonContainer.id = 'edit-buttons-' + sectionId;
-  buttonContainer.className = 'mt-3 flex items-center gap-3';
-  buttonContainer.innerHTML = `
-    <button onclick="cancelEditSection('${sectionId}')" 
-      class="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 text-sm font-medium underline transition">
-      Cancel
-    </button>
-    <button onclick="saveSectionEdit('${sectionId}')" 
-      class="text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300 text-sm font-medium underline transition">
-      Save
-    </button>
-    <span id="status-${sectionId}" class="text-xs"></span>
-  `;
-  contentDiv.appendChild(buttonContainer);
+  if (iconContainer) {
+    iconContainer.style.display = 'none';
+  }
+  if (buttonsContainer) {
+    buttonsContainer.style.display = 'flex';
+  }
+  if (headerWrapper) {
+    headerWrapper.style.marginBottom = '1.5rem';
+  }
 }
 
 function cancelEditSection(sectionId) {
@@ -3874,11 +3889,19 @@ function cancelEditSection(sectionId) {
     delete quillEditors[sectionId];
   }
   
-  // Re-enable the edit button
-  const editBtn = section.querySelector('[data-edit-icon]');
-  if (editBtn) {
-    editBtn.disabled = false;
-    editBtn.style.opacity = '1';
+  // Show icon and hide buttons
+  const iconContainer = document.getElementById(`icon-${sectionId}`);
+  const buttonsContainer = document.getElementById(`buttons-${sectionId}`);
+  const headerWrapper = section.querySelector('.handbook-header-wrapper');
+  
+  if (iconContainer) {
+    iconContainer.style.display = 'inline-flex';
+  }
+  if (buttonsContainer) {
+    buttonsContainer.style.display = 'none';
+  }
+  if (headerWrapper) {
+    headerWrapper.style.marginBottom = '';
   }
 }
 
@@ -3887,11 +3910,10 @@ function cancelEditSection(sectionId) {
 function saveSectionEdit(sectionId) {
   if (!quillEditors[sectionId]) return;
   
-  const statusSpan = document.getElementById('status-' + sectionId);
-  const saveBtn = document.querySelector('#edit-buttons-' + sectionId + ' button:nth-of-type(2)');
+  const buttonsContainer = document.getElementById(`buttons-${sectionId}`);
+  const saveBtn = buttonsContainer ? buttonsContainer.querySelector('button:last-child') : null;
   
-  // Show loading
-  if (statusSpan) statusSpan.innerHTML = '<span class="flex items-center gap-1 text-blue-600 dark:text-blue-400"><span class="animate-spin">⟳</span> Saving...</span>';
+  // Disable save button
   if (saveBtn) saveBtn.disabled = true;
   
   // Get the content from Quill editor
@@ -3909,18 +3931,16 @@ function saveSectionEdit(sectionId) {
   .then(response => response.json())
   .then(data => {
     if (data.success) {
-      if (statusSpan) statusSpan.innerHTML = '<span class="text-green-600 dark:text-green-400 font-medium">✓ Saved!</span>';
-      if (saveBtn) saveBtn.disabled = false;
       // Auto-exit edit mode immediately
       cancelEditSection(sectionId);
     } else {
       if (saveBtn) saveBtn.disabled = false;
-      if (statusSpan) statusSpan.innerHTML = '<span class="text-red-600 dark:text-red-400 text-xs">Error</span>';
+      alert('Error saving section: ' + (data.message || 'Unknown error'));
     }
   })
   .catch(error => {
     if (saveBtn) saveBtn.disabled = false;
-    if (statusSpan) statusSpan.innerHTML = '<span class="text-red-600 dark:text-red-400 text-xs">Error</span>';
+    alert('Error saving section: ' + error.message);
   });
 }
 
