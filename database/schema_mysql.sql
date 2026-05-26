@@ -2,7 +2,7 @@
 -- Target: MySQL / MariaDB (utf8mb4)
 -- NOTE: This is a best-effort conversion from SQL Server T-SQL. Review triggers and complex T-SQL logic.
 
-CREATE DATABASE IF NOT EXISTS `PrototypeDO_DB` CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
 USE `PrototypeDO_DB`;
 
 -- -----------------------------
