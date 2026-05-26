@@ -3,8 +3,6 @@
 -- NOTE: This is a best-effort conversion from SQL Server T-SQL. Review triggers and complex T-SQL logic.
 
 
-USE `PrototypeDO_DB`;
-
 -- -----------------------------
 -- Table structure for `users`
 -- -----------------------------
